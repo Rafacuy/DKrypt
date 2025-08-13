@@ -2,8 +2,6 @@
 <a href="#"><img alt="Dkrypt-logo" src="./docs/logo.png" width="55%" height="55%"></a>
 </p>
 
-<h1 align="center">DKrypt</h1>
-
 <em><h5 align="center">Developed by Rafacuy (arazz.)</h5></em>
 
 <p align="center">

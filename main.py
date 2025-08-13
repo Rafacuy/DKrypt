@@ -34,7 +34,7 @@ def main():
         choice = show_menu()
 
         if choice == '1':
-            subdomain.run_subdomain_scanner()
+            subdomain.main_menu()
         elif choice == '2':
             ssl_inspector.run_ssl_inspector()
         elif choice == '3':

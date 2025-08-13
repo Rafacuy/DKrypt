@@ -1,31 +1,43 @@
-# modules/subdomain.py
+# subdomain_scanner_v2.py
 import dns.resolver
 import random
 import socket
+import os
+import itertools
+from pathlib import Path
+from datetime import datetime
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from collections import defaultdict
 from time import time, sleep
+from threading import Semaphore
+
+# Rich library for beautiful TUIs
 from rich.console import Console, Group
 from rich.panel import Panel
+from rich.prompt import Prompt, IntPrompt
 from rich.live import Live
 from rich.table import Table
 from rich.progress import Progress, SpinnerColumn, BarColumn, TextColumn
-from rich.text import Text
 from rich.box import ROUNDED
-from rich.layout import Layout
-
-import socks
-import itertools
-from threading import Semaphore
+from rich.text import Text
+from rich.align import Align
 from core.utils import clear_console, load_wordlist
+
+# Optional: SOCKS proxy support
+try:
+    import socks
+    SOCKS_AVAILABLE = True
+except ImportError:
+    SOCKS_AVAILABLE = False
 
 # --- Initialize Rich Console ---
 console = Console()
 
+
 def chunked(iterable, size):
     """
-    Splits an iterable into chunks of a given size using a generator.
-    This is memory-efficient as it doesn't load all chunks into memory.
+    Splits an iterable into chunks of a given size.
+    Memory-efficient as it doesn't load all chunks at once.
     """
     it = iter(iterable)
     while True:
@@ -34,87 +46,53 @@ def chunked(iterable, size):
             break
         yield chunk
 
+def create_results_dir(base_dir="reports/subdomain_results/"):
+    """
+    Creates the main directory for storing scan results.
+    """
+    Path(base_dir).mkdir(parents=True, exist_ok=True)
+    return base_dir
+
+# --- Core Scanner Class ---
+
 class DNSScanner:
     """
-    A class to perform DNS scanning with support for proxies, rate limiting,
-    and efficient, multi-threaded subdomain enumeration.
+    Performs DNS scanning with support for rate limiting and proxies.
     """
     def __init__(self, rate_limit=50):
-        """
-        Initializes the scanner.
-        Args:
-            rate_limit (int): Maximum number of concurrent DNS queries.
-        """
-        self.resolvers = [
-            '8.8.8.8',        # Google
-            '1.1.1.1',        # Cloudflare
-            '9.9.9.9',        # Quad9
-            '208.67.222.222'  # OpenDNS
-        ]
-        self.default_ports = {
-            'socks4': 1080,
-            'socks5': 1080,
-            'http': 8080
-        }
-        # --- FIX: Configurable rate limiting ---
-        # Use a Semaphore to limit concurrent requests, preventing DNS server overload.
+        self.resolvers = ['8.8.8.8', '1.1.1.1', '9.9.9.9', '208.67.222.222']
+        self.default_ports = {'socks4': 1080, 'socks5': 1080, 'http': 8080}
         self.rate_limiter = Semaphore(rate_limit)
+        self.proxy_configured = False
 
     def configure_proxy(self, proxy_type, proxy_host, proxy_port=None):
-        """
-        Configures a network proxy for all subsequent socket operations and
-        redirects DNS resolution through the proxy.
-        """
+        """Configures a SOCKS proxy for DNS resolution."""
+        if not SOCKS_AVAILABLE:
+            console.print("[red]Error:[/] PySocks library not installed. Cannot configure proxy.")
+            console.print("Install it with: [bold]pip install PySocks[/bold]")
+            return False
         try:
             proxy_port = int(proxy_port) if proxy_port else self.default_ports.get(proxy_type, 1080)
-            proxy_map = {
-                'socks4': socks.SOCKS4,
-                'socks5': socks.SOCKS5,
-                'http': socks.HTTP
-            }
-            socks.set_default_proxy(
-                proxy_map[proxy_type],
-                proxy_host,
-                proxy_port
-            )
+            proxy_map = {'socks4': socks.SOCKS4, 'socks5': socks.SOCKS5, 'http': socks.HTTP}
+            socks.set_default_proxy(proxy_map[proxy_type], proxy_host, proxy_port)
             socket.socket = socks.socksocket
-            
-            # --- Proxy Support for DNS ---
-            # The dns.resolver module does not automatically use the patched socket.
-            # We must explicitly configure the default resolver to use the proxy as its nameserver.
-            # This assumes the proxy server can handle DNS queries.
             dns.resolver.default_resolver = dns.resolver.Resolver(configure=False)
             dns.resolver.default_resolver.nameservers = [proxy_host]
-            
-            console.print(f"[green]✓ Proxy {proxy_type}://{proxy_host}:{proxy_port} configured[/green]")
-            console.print(f"[yellow]  DNS queries will be routed through {proxy_host}[/yellow]")
+            self.proxy_configured = True
+            console.print(f"[green]✓ Proxy {proxy_type}://{proxy_host}:{proxy_port} configured.[/green]")
             return True
         except Exception as e:
-            console.print(f"[red]× Proxy configuration error: {str(e)}[/red]")
+            console.print(f"[red]× Proxy configuration error: {e}[/red]")
             return False
 
     def dns_query(self, domain, retries=2, timeout=2):
-        """
-        Performs DNS queries for multiple record types (A, AAAA, CNAME).
-
-        Args:
-            domain (str): The domain to resolve.
-            retries (int): Number of times to retry on failure.
-            timeout (int): Timeout for each DNS query in seconds.
-
-        Returns:
-            tuple: A tuple of (Record Type, Value) or None if resolution fails.
-        """
-        # Use the globally configured resolver (which may be using the proxy)
+        """Performs DNS queries for A, AAAA, and CNAME records."""
         resolver = dns.resolver.get_default_resolver()
-        # If no proxy is set, pick a random public resolver for load distribution
-        if not socks.get_default_proxy():
+        if not self.proxy_configured:
             resolver.nameservers = [random.choice(self.resolvers)]
         
         resolver.timeout = timeout
         resolver.lifetime = timeout + 1
-        
-        # Check for A, AAAA, and CNAME records for more comprehensive results.
         record_types = ['A', 'AAAA', 'CNAME']
 
         for _ in range(retries):
@@ -122,149 +100,205 @@ class DNSScanner:
                 try:
                     answers = resolver.resolve(domain, rtype)
                     if answers:
-                        if rtype == 'CNAME':
-                            return (rtype, str(answers[0].target))
-                        return (rtype, str(answers[0]))
+                        value = str(answers[0].target) if rtype == 'CNAME' else str(answers[0])
+                        return (rtype, value)
                 except (dns.resolver.NXDOMAIN, dns.resolver.NoAnswer):
-                    # This domain doesn't exist for this record type, which is normal.
-                    # We break here to avoid retrying for a known non-existent domain.
-                    return None
+                    return None # Domain doesn't exist for this record type
                 except dns.exception.Timeout:
-                    # Timeout occurred, sleep and the outer loop will retry.
                     sleep(0.2)
-                    break 
+                    break
                 except Exception:
-                    # Another error occurred, sleep before retrying.
                     sleep(0.5)
                     break
-            else: # If inner loop completed without break
+            else:
                 continue
-            break # If inner loop was broken by timeout/error
+            break
         return None
 
     def scan_subdomain(self, target_domain, sub, table):
-        """
-        Scans a single subdomain and adds the result to the live table.
-        
-        Args:
-            target_domain (str): The main domain (e.g., 'example.com').
-            sub (str): A subdomain to test.
-            table (rich.table.Table): The live table to add results to.
-
-        Returns:
-            tuple: (found_domain, record_type, value) or None.
-        """
-        # Acquire the semaphore; this will block if the rate limit is reached.
+        """Scans a single subdomain and updates the live table."""
         with self.rate_limiter:
             full_domain = f"{sub}.{target_domain}"
             result = self.dns_query(full_domain)
             if result:
                 record_type, value = result
-                # Add to the live table for real-time display
                 table.add_row(full_domain, record_type, value, style="bright_green")
                 return (full_domain, record_type, value)
         return None
 
-def run_subdomain_scanner():
-    """Main function to run the subdomain scanner tool."""
-    clear_console()
-    console.print(Panel.fit("[bold]🚀 SUBDOMAIN SCANNER [/]", style="cyan", padding=(1, 2)))
+# --- TUI & Main Logic ---
 
-    # --- Configuration ---
-    rate_limit = int(console.input("[bold]Enter rate limit (concurrent requests, default: 50): [/]") or "50")
-    scanner = DNSScanner(rate_limit=rate_limit)
+def display_banner():
+    """Displays the application banner."""
+    banner_text = Text("Subdomain Scanner v2.0", style="bold cyan", justify="center")
+    panel = Panel(banner_text, box=ROUNDED, border_style="magenta", padding=(1, 2))
+    console.print(panel)
 
-    if console.input("[bold]Use proxy? (y/N): [/]").lower() == 'y':
-        proxy_type = console.input("[bold]Proxy type (socks4/socks5/http): [/]").strip().lower()
-        proxy_host = console.input("[bold]Proxy host: [/]").strip()
-        proxy_port = console.input(f"[bold]Proxy port (default: {scanner.default_ports.get(proxy_type, 'N/A')}): [/]").strip()
+def get_scan_config(scanner):
+    """Prompts user for rate limit and proxy settings."""
+    rate_limit = IntPrompt.ask("[bold]Enter rate limit (concurrent requests)[/]", default=50)
+    scanner.rate_limiter = Semaphore(rate_limit)
+    
+    if SOCKS_AVAILABLE and Prompt.ask("[bold]Use proxy? (y/N)[/]", default='n').lower() == 'y':
+        proxy_type = Prompt.ask("[bold]Proxy type[/]", choices=['socks4', 'socks5', 'http'], default='socks5')
+        proxy_host = Prompt.ask("[bold]Proxy host[/]").strip()
+        proxy_port = Prompt.ask(f"[bold]Proxy port (default: {scanner.default_ports.get(proxy_type, 'N/A')})[/]").strip()
         if not scanner.configure_proxy(proxy_type, proxy_host, proxy_port or None):
-            return # Exit if proxy configuration fails
+            return False # Proxy config failed
+    return True
 
-    wordlist = load_wordlist()
-    if not wordlist:
-        console.print("[red]× Wordlist could not be loaded. Exiting.[/red]")
-        return
-    
+def perform_scan(targets, scanner, wordlist):
+    """
+    Manages the entire scanning process for a list of targets.
+    """
+    base_results_dir = create_results_dir()
     wordlist_size = len(wordlist)
-
-    targets_input = console.input("[bold]Enter target domains (comma-separated): [/]")
-    targets = list({t.strip() for t in targets_input.split(',') if '.' in t})
-    if not targets:
-        console.print("[red]× No valid target domains entered. Exiting.[/red]")
-        return
-
-    # --- Configuration for Threading ---
-    MAX_WORKERS = rate_limit + 10 # Set workers slightly higher than rate limit
-
-    console.print(f"[cyan]Wordlist loaded: {wordlist_size} subdomains.[/cyan]")
-    console.print(f"[cyan]Rate limit set to {rate_limit} concurrent requests.[/cyan]")
-
-    # --- Setup Live UI ---
-    results_table = Table(title="Discovered Subdomains", box=ROUNDED, expand=True)
-    results_table.add_column("Subdomain", justify="left", style="cyan", no_wrap=True)
-    results_table.add_column("Type", justify="center", style="yellow", width=8)
-    results_table.add_column("Value", justify="left", style="magenta")
-
-    total_tasks = wordlist_size * len(targets)
-    progress = Progress(
-        SpinnerColumn(),
-        TextColumn("[progress.description]{task.description}"),
-        BarColumn(),
-        TextColumn("[progress.percentage]{task.percentage:>3.0f}%"),
-        TextColumn("({task.completed} of {task.total})"),
-        console=console,
-    )
-    progress_task = progress.add_task("[green]Scanning...", total=total_tasks)
     
-    # Group the progress bar and results table for a clean live view.
-    live_group = Group(Panel(progress, title="Overall Progress", border_style="green"), results_table)
+    for target_domain in targets:
+        console.rule(f"[bold cyan]Scanning: {target_domain}[/bold cyan]")
+        
+        # --- Setup Live UI ---
+        results_table = Table(title=f"Discovered Subdomains for {target_domain}", box=ROUNDED, expand=True)
+        results_table.add_column("Subdomain", style="cyan", no_wrap=True)
+        results_table.add_column("Type", style="yellow", width=8)
+        results_table.add_column("Value", style="magenta")
 
-    all_found = defaultdict(list)
-    start_time = time()
+        progress = Progress(
+            SpinnerColumn(),
+            TextColumn("[progress.description]{task.description}"),
+            BarColumn(),
+            TextColumn("[progress.percentage]{task.percentage:>3.0f}%"),
+            console=console,
+        )
+        progress_task = progress.add_task("[green]Scanning...", total=wordlist_size)
+        live_group = Panel(Group(progress, results_table), title="Scan Progress", border_style="green")
 
-    with Live(live_group, refresh_per_second=10, console=console):
-        with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
-            for chunk in chunked(((target, sub) for target in targets for sub in wordlist), MAX_WORKERS):
-                futures = [executor.submit(scanner.scan_subdomain, t, s, results_table) for t, s in chunk]
+        found_subs = []
+        start_time = time()
+
+        with Live(live_group, refresh_per_second=10, console=console):
+            with ThreadPoolExecutor(max_workers=scanner.rate_limiter._value + 10) as executor:
+                futures = [executor.submit(scanner.scan_subdomain, target_domain, sub, results_table) for sub in wordlist]
                 for future in as_completed(futures):
                     try:
                         result = future.result()
                         if result:
-                            all_found[result[0].split('.')[-2] + '.' + result[0].split('.')[-1]].append(result)
+                            found_subs.append(result)
                     except Exception as exc:
-                        console.print(f'[red]× A task generated an exception: {exc}[/red]')
+                        console.log(f'[red]A task generated an exception: {exc}[/red]')
                     finally:
                         progress.advance(progress_task)
+        
+        scan_duration = time() - start_time
+        save_results(target_domain, found_subs, base_results_dir, scan_duration)
 
-    # --- Final Summary and Save Results ---
-    total_found_count = sum(len(v) for v in all_found.values())
-    scan_duration = time() - start_time
+def save_results(target, results, base_dir, duration):
+    """Saves the scan results to a structured directory and file."""
+    if not results:
+        console.print(f"\n[yellow]No subdomains found for {target}.[/yellow]")
+        return
+        
+    # Create a unique, timestamped directory for this target's scan
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    target_dir_name = f"{target.replace('.', '_')}_{timestamp}"
+    target_path = Path(base_dir) / target_dir_name
+    target_path.mkdir(exist_ok=True)
+    
+    filename = target_path / f"found_subdomains.txt"
     
     console.print("\n" + "="*60)
-    console.print(f"[bold green]✓ Scan Complete![/bold green]")
-    console.print(f"  [+] Duration: {scan_duration:.2f} seconds")
-    console.print(f"  [+] Total Subdomains Found: {total_found_count}")
+    console.print(f"[bold green]✓ Scan for [cyan]{target}[/cyan] Complete![/bold green]")
+    console.print(f"  [+] Duration: {duration:.2f} seconds")
+    console.print(f"  [+] Total Found: {len(results)}")
+    console.print(f"  [+] Saving results to: [yellow]{filename}[/yellow]")
     console.print("="*60 + "\n")
 
-    if total_found_count > 0:
-        for target, subs in all_found.items():
-            filename = f"found_subdomains_{target.replace('.','_')}.txt"
-            console.print(f"[bold]Saving results for [cyan]{target}[/cyan] to [yellow]{filename}[/yellow]...")
+    try:
+        with open(filename, 'w') as f:
+            f.write(f"# Subdomain scan results for {target}\n")
+            f.write(f"# Scan completed on: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n\n")
+            f.write(f"{'Subdomain':<40}{'Type':<10}{'Value'}\n")
+            f.write(f"{'-'*40}{'-'*10}{'-'*30}\n")
+            for domain, rtype, value in sorted(results):
+                f.write(f"{domain:<40}{rtype:<10}{value}\n")
+        console.print(f"[green]  ✓ Successfully saved.[/green]\n")
+    except IOError as e:
+        console.print(f"[red]  × Error saving file: {e}[/red]\n")
+
+
+def main_menu():
+    """Displays the main menu and handles user choices."""
+    scanner = DNSScanner()
+    wordlist = None
+
+    while True:
+        clear_console()
+        display_banner()
+        
+        menu_text = (
+            "[1] Single URL Scan\n"
+            "[2] Batch Scan from File\n"
+            "[3] Exit"
+        )
+        panel = Panel(
+            Align.center(menu_text, vertical="middle"),
+            title="[bold]Scan Options[/bold]",
+            border_style="cyan",
+            padding=(2, 4)
+        )
+        console.print(panel)
+        
+        choice = Prompt.ask("[bold]Choose an option[/bold]", choices=['1', '2', '3'], default='1')
+
+        if choice == '3':
+            console.print("[bold magenta]Goodbye![/bold magenta]")
+            break
+        
+        if not get_scan_config(scanner):
+            sleep(2)
+            continue # Return to menu if proxy config fails
+
+        if wordlist is None:
+            wordlist_path = Prompt.ask("[bold]Enter path to wordlist[/]", default="wordlist.txt")
+            wordlist = load_wordlist(wordlist_path)
+            if not wordlist:
+                console.print("[red]Wordlist could not be loaded. Returning to menu.[/red]")
+                sleep(2)
+                continue
+
+        targets = []
+        if choice == '1':
+            target_url = Prompt.ask("[bold]Enter the target domain (e.g., example.com)[/]").strip()
+            if '.' in target_url:
+                targets.append(target_url)
+            else:
+                console.print("[red]Invalid domain format.[/red]")
+                sleep(2)
+                continue
+
+        elif choice == '2':
+            file_path = Prompt.ask("[bold]Enter the path to the file with URLs[/]").strip()
             try:
-                with open(filename, 'w') as f:
-                    f.write(f"Subdomain scan results for {target}\n\n")
-                    f.write("Subdomain".ljust(40) + "Type".ljust(10) + "Value\n")
-                    f.write("-" * 70 + "\n")
-                    for domain, rtype, value in sorted(subs):
-                        f.write(f"{domain.ljust(40)}{rtype.ljust(10)}{value}\n")
-                console.print(f"[green]  ✓ Successfully saved.[/green]")
-            except IOError as e:
-                console.print(f"[red]  × Error saving file: {e}[/red]")
+                with open(file_path, 'r') as f:
+                    targets = [line.strip() for line in f if '.' in line.strip()]
+                if not targets:
+                    console.print("[red]No valid domains found in file.[/red]")
+                    sleep(2)
+                    continue
+            except FileNotFoundError:
+                console.print(f"[red]Error: File not found at '{file_path}'[/red]")
+                sleep(2)
+                continue
+        
+        perform_scan(targets, scanner, wordlist)
+        Prompt.ask("\n[bold]Press Enter to return to the main menu...[/bold]")
+
 
 if __name__ == '__main__':
     try:
-        run_subdomain_scanner()
+        main_menu()
     except KeyboardInterrupt:
-        console.print("\n[bold red]Operation cancelled by user.[/bold red]")
+        console.print("\n\n[bold red]Operation cancelled by user.[/bold red]")
+    except Exception as e:
+        console.print(f"\n[bold red]An unexpected error occurred: {e}[/bold red]")
 

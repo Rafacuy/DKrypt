@@ -22,8 +22,6 @@ PySocks
 
 socks
 
-textual
-
 graphviz
 
 asyncio
@@ -36,3 +34,5 @@ pyopenssl
 
 brotli
 
+
+aiodns

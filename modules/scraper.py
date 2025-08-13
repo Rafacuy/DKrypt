@@ -238,7 +238,7 @@ def save_to_file(data: List[Dict[str, Any]], filename: str, format_type: str):
                 for key, value in og_properties.items():
                     flat_item[f"og_{key}"] = value
                 flat_data.append(flat_item)
-            
+                
             if flat_data:
                 with open(full_path, 'w', newline='', encoding='utf-8') as f:
                     writer = csv.DictWriter(f, fieldnames=flat_data[0].keys())
