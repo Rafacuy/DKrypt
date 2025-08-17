@@ -16,7 +16,8 @@ def show_menu():
         ("5", "Website Scraper", "Extract website content in a structured manner"),
         ("6", "Admin Page Finder", "Find hidden admin pages"),
         ("7", "Directory BruteForcer", "Search for hidden directories and files"),
-        ("8", "Exit", "Exit the application")
+        ("8", "Port Scanner", "Find a port within the website"),
+        ("9", "Exit", "Exit the application")
     ]
     
     # Opening

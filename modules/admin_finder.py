@@ -18,7 +18,7 @@ console = Console()
 
 # --- Konfigurasi ---
 WORDLIST_PATH = Path("wordlists/admin-panels.txt")
-REPORT_FILE = "bug_reports.txt"
+REPORT_FILE = "reports/admin_page/bug_reports.txt"
 MAX_WORKERS = 20  # Jumlah thread untuk pemindaian konkuren
 REQUEST_TIMEOUT = (3, 10) # (connect, read) timeout dalam detik
 
@@ -139,7 +139,7 @@ def main():
         return
     
     try:
-        wordlist = load_wordlist()
+        wordlist = load_wordlist(path="wordlists/admin-panels.txt")
         console.print(f"\n[bold green]Loading {len(wordlist)} paths from wordlist[/bold green]")
     except Exception as e:
         console.print(f"[bold red]An error occured while loading wordlist: {str(e)}[/bold red]")

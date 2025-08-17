@@ -20,7 +20,7 @@ from core.randomizer import HeaderFactory
 from rich.console import Console
 from rich.layout import Layout
 from rich.panel import Panel
-from modules import subdomain, ssl_inspector, vulnerability, scraper, admin_finder, dir_bruteforcer, header_audit
+from modules import subdomain, ssl_inspector, vulnerability, scraper, admin_finder, dir_bruteforcer, header_audit, port_scanner
 
 console = Console()
 
@@ -42,12 +42,20 @@ def main():
         elif choice == '4':
            header_audit.HeaderAuditor().run()
         elif choice == '5':
-            asyncio.run(scraper.main_menu(HeaderFactory()))     
+            try:
+                asyncio.run(scraper.main_menu(HeaderFactory()))
+            except KeyboardInterrupt:
+                console.print("\n[bold yellow]Program interrupted by user. Exiting.[/bold yellow]")         
         elif choice == '6':
             admin_finder.main()
         elif choice == '7':
             dir_bruteforcer.main()       
         elif choice == '8':
+            try:
+                asyncio.run(port_scanner.main_menu()) 
+            except KeyboardInterrupt:
+                console.print("\n[bold yellow]Program interrupted by user. Exiting.[/bold yellow]")   
+        elif choice == '9':
             console.print("[bold red]\n  Exiting... \n[/bold red]")
             sys.exit(0)
         else:
