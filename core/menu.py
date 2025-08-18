@@ -17,7 +17,8 @@ def show_menu():
         ("6", "Admin Page Finder", "Find hidden admin pages"),
         ("7", "Directory BruteForcer", "Search for hidden directories and files"),
         ("8", "Port Scanner", "Find a port within the website"),
-        ("9", "Exit", "Exit the application")
+        ("9", "WAF Bypass tester", "Find a vulnerabilites on the WAF's target website. (BETA)"),
+        ("10", "Exit", "Exit the application")
     ]
     
     # Opening
@@ -34,7 +35,7 @@ def show_menu():
     
     # app description
     menu_content.append("Integrated Security Toolkit\n", style="bold #118AB2")
-    menu_content.append("Version 1.0.0 • © 2025 DKrypt Security\n\n", style="italic #6C757D")
+    menu_content.append("Version 1.1.2 (BETA) • © 2025 DKrypt Security\n\n", style="italic #6C757D")
     
     # Menu options
     for number, label, desc in menu_options:
@@ -45,7 +46,7 @@ def show_menu():
         menu_content.append("\n\n")
 
     # footer
-    footer = Text("Select option 1-8 • Confirm: ENTER", style="italic #6C757D", justify="center")
+    footer = Text("Select option 1-10 • Confirm: ENTER", style="italic #6C757D", justify="center")
     
     # custom border
     console.print()
@@ -58,7 +59,7 @@ def show_menu():
         width=80
     ))
     
-    return console.input("\n[blink bold #EF476F]>>>[/blink bold #EF476F] Select option (1-8): ")
+    return console.input("\n[blink bold #EF476F]>>>[/blink bold #EF476F] Select option (1-10): ")
 
 if __name__ == '__main__':
     show_menu()

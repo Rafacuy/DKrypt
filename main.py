@@ -20,7 +20,7 @@ from core.randomizer import HeaderFactory
 from rich.console import Console
 from rich.layout import Layout
 from rich.panel import Panel
-from modules import subdomain, ssl_inspector, vulnerability, scraper, admin_finder, dir_bruteforcer, header_audit, port_scanner
+from modules import subdomain, ssl_inspector, vulnerability, scraper, admin_finder, dir_bruteforcer, header_audit, port_scanner, waf_test
 
 console = Console()
 
@@ -54,8 +54,11 @@ def main():
             try:
                 asyncio.run(port_scanner.main_menu()) 
             except KeyboardInterrupt:
-                console.print("\n[bold yellow]Program interrupted by user. Exiting.[/bold yellow]")   
-        elif choice == '9':
+                console.print("\n[bold yellow]Program interrupted by user. Exiting.[/bold yellow]") 
+        elif choice == '9': 
+            app = waf_test.WAFTUI()
+            app.run()
+        elif choice == '10':
             console.print("[bold red]\n  Exiting... \n[/bold red]")
             sys.exit(0)
         else:

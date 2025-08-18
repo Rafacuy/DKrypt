@@ -33,6 +33,7 @@ DKrypt is an advanced, all-in-one penetration testing framework designed for sec
 - **Website Vulnerability Scanner**: _Detect common web application vulnerabilities._
 - **Admin Page Finder**: _Discover admin page on the target web servers._
 - **Port Scanner**: _Discover hidden port on the target website._
+- **WAF Bypass tester**: _Bypass WAF on a website to find weaknesses on the website's WAF._
 
 ---
 
