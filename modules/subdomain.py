@@ -1,4 +1,4 @@
-# subdomain_scanner_v2.py
+# modules/subdomain.py
 import dns.resolver
 import random
 import socket
@@ -87,9 +87,9 @@ class DNSScanner:
 
     def dns_query(self, domain, retries=2, timeout=2):
         """Performs DNS queries for A, AAAA, and CNAME records."""
-        resolver = dns.resolver.get_default_resolver()
-        if not self.proxy_configured:
-            resolver.nameservers = [random.choice(self.resolvers)]
+        resolver = dns.resolver.Resolver(configure=False)
+    
+        resolver.nameservers = self.resolvers if not self.proxy_configured else [random.choice(self.resolvers)]
         
         resolver.timeout = timeout
         resolver.lifetime = timeout + 1
@@ -130,7 +130,7 @@ class DNSScanner:
 
 def display_banner():
     """Displays the application banner."""
-    banner_text = Text("Subdomain Scanner v2.0", style="bold cyan", justify="center")
+    banner_text = Text("Subdomain Scanner", style="bold cyan", justify="center")
     panel = Panel(banner_text, box=ROUNDED, border_style="magenta", padding=(1, 2))
     console.print(panel)
 
@@ -244,7 +244,7 @@ def main_menu():
             Align.center(menu_text, vertical="middle"),
             title="[bold]Scan Options[/bold]",
             border_style="cyan",
-            padding=(2, 4)
+            padding=(1, 4)
         )
         console.print(panel)
         
@@ -259,12 +259,17 @@ def main_menu():
             continue # Return to menu if proxy config fails
 
         if wordlist is None:
-            wordlist_path = Prompt.ask("[bold]Enter path to wordlist[/]", default="wordlist.txt")
-            wordlist = load_wordlist(wordlist_path)
-            if not wordlist:
-                console.print("[red]Wordlist could not be loaded. Returning to menu.[/red]")
-                sleep(2)
-                continue
+            ask_for_custom = Prompt.ask("[bold]Want to use custom wordlist? (y/N): ", default="N")
+            if ask_for_custom.lower() == 'y':
+                wordlist_path = Prompt.ask("[bold]Enter path to wordlist[/]", default="wordlists/subdomain.txt")
+                wordlist = load_wordlist(path=wordlist_path)
+                if not wordlist:
+                    console.print("[red]Wordlist could not be loaded. Returning to menu.[/red]")
+                    sleep(2)
+                    continue
+            else:
+                console.print("[green][!] Using default wordlist. [/green]")
+                wordlist = load_wordlist(path="wordlists/subdomain.txt")    
 
         targets = []
         if choice == '1':
