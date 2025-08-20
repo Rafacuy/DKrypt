@@ -9,8 +9,8 @@ DKrypt is a Python tool for all-in-one penetration testing with autonomous scrip
 
 
 import asyncio
-import sys
 import os
+import sys
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 from core.utils import clear_console, load_wordlist

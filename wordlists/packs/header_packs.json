@@ -1,0 +1,117 @@
+{
+    "identity_spoof": [
+        {"X-Forwarded-For": "127.0.0.1"},
+        {"X-Forwarded-For": "8.8.8.8"},
+        {"X-Real-IP": "127.0.0.1"},
+        {"X-Remote-Addr": "127.0.0.1"},
+        {"X-Client-IP": "127.0.0.1"},
+        {"CF-Connecting-IP": "127.0.0.1"},
+        {"True-Client-IP": "127.0.0.1"}
+    ],
+    "routing_path": [
+        {"X-Original-URL": "/admin"},
+        {"X-Rewrite-URL": "/admin"},
+        {"X-Forwarded-Path": "/admin"},
+        {"X-Forwarded-Host": "localhost"},
+        {"Host": "localhost"},
+        {"X-Host": "internal.domain.com"}
+    ],
+    "parser_tricks": [
+        {"Content-Type": "application/json; charset=utf-8"},
+        {"Content-Type": "text/plain"},
+        {"Accept": "application/json, */*"},
+        {"Accept-Encoding": "identity"},
+        {"Transfer-Encoding": "chunked"},
+        {"Content-Encoding": "gzip"}
+    ],
+    "tool_evasion": [
+        {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"},
+        {"User-Agent": "GoogleBot/2.1"},
+        {"User-Agent": "curl/7.68.0"},
+        {"X-Requested-With": "XMLHttpRequest"},
+        {"Cache-Control": "no-cache"},
+        {"Pragma": "no-cache"}
+    ],  
+    "advanced_evasion": [
+        {"X-Forwarded-For": "127.0.0.1, 8.8.8.8"},
+        {"X-Forwarded-For": "::1"},
+        {"X-Real-IP": "213.070.001.001"}, 
+        {"X-Client-IP": "0x7f.0x0.0x0.0x1"},  
+        {"X-Originating-IP": "3232235777"}, 
+        {"X-HTTP-Method-Override": "GET"},
+        {"X-Method-Override": "GET"},
+        {"X-HTTP-Method": "GET"},
+        {"X-Forwarded-Proto": "https"},
+        {"X-Forwarded-Protocol": "https"},
+        {"X-Url-Scheme": "https"},
+        {"X-Original-URL": "/static/../admin"},
+        {"X-Rewrite-URL": "/admin"},
+        {"Base-Url": "http://localhost"},
+        {"X-Forwarded-Host": "localhost%00.example.com"},
+        {"Host": "localhost%0d%0aX-Injected:%20header"},
+        {"User-Agent": "Mozilla/5.0 (X11; Linux x86_64) %0d%0aX-Test: injected"},
+        {"Content-Type": "application/json; charset=utf-8; boundary=something"},
+        {"Content-Type": "application/x-www-form-urlencoded; application/json"},
+        {"X-": "value"},
+        {"X-AAAAAAAAAAAAAA": "value"},
+        {"X-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA": "value"}
+    ],
+    
+    "api_gateway": [
+        {"X-API-Key": "test"},
+        {"X-API-Version": "1.0"},
+        {"X-Api-Secret": "test123"},
+        {"X-Gateway-API": "true"},
+        {"X-AWS-API-Key": "test"},
+        {"X-Lambda-Runtime-Function-ARN": "arn:aws:lambda:us-east-1:123456789012:function:my-function"},
+        {"X-Amzn-Trace-Id": "Root=1-67891233-abcdef012345678912345678"},
+        {"X-Google-Cloud-Trace": "105445aa7843bc8bf206b12000100000/1;o=1"},
+        {"X-Azure-Ref": "0jf9nXAAAAABwMzu1Twb1Q5WgQzNSEExzTUVYMzFFREdFMDMyMg"},
+        {"X-Serverless-Authorization": "Bearer test"},
+        {"X-Serverless-Context": "{}"}
+    ],
+    
+    "cdn_headers": [
+        {"X-CDN": "Akamai"},
+        {"X-CDN-Origin": "true"},
+        {"X-EdgeConnect-Origin-MEX": "true"},
+        {"X-EC-Debug": "true"},
+        {"X-Frame-Options": "allow-from https://example.com"},
+        {"Cache-Control": "no-store, no-cache, must-revalidate, max-age=0"},
+        {"Pragma": "no-cache"},
+        {"Expires": "0"},
+        {"X-CDN-Auth": "bypass"},
+        {"X-Auth-Token": "cdn-bypass-token"},
+        {"X-Origin-Auth": "bypass"}
+    ],
+    
+    "protocol_anomalies": [
+        {"Transfer-Encoding": "chunked, identity"},
+        {"Content-Length": "0"},  
+        {"Content-Length": "1000000"},  
+        {":method": "GET"},
+        {":path": "/admin"},
+        {":authority": "example.com"},
+        {"X-Forwarded-For": "127.0.0.1"},
+        {"X-Forwarded-For": "8.8.8.8"},  
+        {"X-Forwarded-For": "127.0.0.1;8.8.8.8"},
+        {"X-Forwarded-For": "127.0.0.1,8.8.8.8,10.0.0.1"},  
+        {"X-Forwarded-For": ""},
+        {"X-Forwarded-For": "null"},
+        {"X-Forwarded-For": "undefined"}
+    ],
+    
+    "mobile_headers": [
+        {"X-OperaMini-Phone": "UA"},
+        {"X-Device-User-Agent": "Mozilla/5.0 (Linux; Android 10; SM-G981B) AppleWebKit/537.36"},
+        {"X-Device-Stock-UA": "Mozilla/5.0 (Linux; Android 10; SM-G981B) AppleWebKit/537.36"},
+        {"X-Requested-With": "com.example.app"},
+        {"X-Network-Type": "WiFi"},
+        {"X-Cellular-Network-Type": "LTE"},
+        {"X-Mobile-Country-Code": "310"},
+        {"X-Mobile-Network-Code": "260"},
+        {"X-Carrier": "Verizon"},
+        {"X-ATT-DeviceId": "test-device-id"},
+        {"X-VZW-MDN": "1234567890"}
+    ]
+}

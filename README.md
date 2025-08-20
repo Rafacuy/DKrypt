@@ -82,6 +82,8 @@ Custom wordlists for:
 
 * Admin panel discovery
 
+* Pack headers 
+
 _Located in /wordlists/_
 
 ## Contributing
