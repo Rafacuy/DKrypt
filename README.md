@@ -22,7 +22,7 @@
 
 
 <h1 align="center">Introduction</h1>
-DKrypt is an advanced, all-in-one penetration testing framework designed for security professionals, ethical hackers, and IT administrators. Built with modularity and efficiency at its core, DKrypt integrates cutting-edge reconnaissance, vulnerability scanning, and exploitation tools into a unified command-line interface. With its real-time visualization and intelligent automation, DKrypt transforms complex security assessments into streamlined workflows.
+DKrypt is an advanced, all-in-one penetration testing framework designed for security professionals, ethical hackers, and IT administrators. Built with modularity and efficiency at its core, DKrypt integrates cutting-edge reconnaissance, vulnerability scanning, and exploitation tools into a unified Text-based user interface (TUI). With its real-time visualization and intelligent automation, DKrypt transforms complex security assessments into streamlined workflows.
 
 ## _Features_
 - **Directory Bruteforcer**: _Discover hidden directories on target web servers._
@@ -34,6 +34,7 @@ DKrypt is an advanced, all-in-one penetration testing framework designed for sec
 - **Admin Page Finder**: _Discover admin page on the target web servers._
 - **Port Scanner**: _Discover hidden port on the target website._
 - **WAF Bypass tester**: _Bypass WAF on a website to find weaknesses on the website's WAF._
+- **CORS Misconfiguration Auditor**: _Find a vulnerabilites on the CORS Configuration._
 
 ---
 
