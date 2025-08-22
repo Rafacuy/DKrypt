@@ -20,7 +20,7 @@ from core.randomizer import HeaderFactory
 from rich.console import Console
 from rich.layout import Layout
 from rich.panel import Panel
-from modules import subdomain, ssl_inspector, vulnerability, scraper, admin_finder, dir_bruteforcer, header_audit, port_scanner, waf_test, cors_scan 
+from modules import subdomain, ssl_inspector, vulnerability, scraper, admin_finder, dir_bruteforcer, header_audit, port_scanner, waf_test, cors_scan, desync_tester 
 
 console = Console()
 
@@ -59,8 +59,10 @@ def main():
             app = waf_test.WAFTUI()
             app.run()
         elif choice == '10':
-            cors_scan.main()    
+            cors_scan.main()
         elif choice == '11':
+            desync_tester.run()        
+        elif choice == '12':
             console.print("[bold red]\n  Exiting... \n[/bold red]")
             sys.exit(0)
         else:

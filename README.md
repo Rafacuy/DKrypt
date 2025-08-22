@@ -35,6 +35,7 @@ DKrypt is an advanced, all-in-one penetration testing framework designed for sec
 - **Port Scanner**: _Discover hidden port on the target website._
 - **WAF Bypass tester**: _Bypass WAF on a website to find weaknesses on the website's WAF._
 - **CORS Misconfiguration Auditor**: _Find a vulnerabilites on the CORS Configuration._
+- **HTTP Desync Attack Tester**: _Manipulating header content to inject hidden requests._
 
 ---
 
@@ -83,7 +84,7 @@ Custom wordlists for:
 
 * Admin panel discovery
 
-* Pack headers 
+* Headers Pack
 
 _Located in /wordlists/_
 
