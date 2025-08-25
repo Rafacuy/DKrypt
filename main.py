@@ -11,58 +11,59 @@ DKrypt is a Python tool for all-in-one penetration testing with autonomous scrip
 import asyncio
 import os
 import sys
+
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 from core.utils import clear_console, load_wordlist
 from core.banner import display_header
-from core.menu import show_menu
+from core.menu import MenuSystem
 from core.randomizer import HeaderFactory
 from rich.console import Console
 from rich.layout import Layout
 from rich.panel import Panel
-from modules import subdomain, ssl_inspector, vulnerability, scraper, admin_finder, dir_bruteforcer, header_audit, port_scanner, waf_test, cors_scan, desync_tester 
+from modules import subdomain, ssl_inspector, vulnerability, scraper, admin_finder, dir_bruteforcer, header_audit, port_scanner, waf_test, cors_scan, desync_tester
 
 console = Console()
 
 def main():
-    wordlist = load_wordlist()
+    menu = MenuSystem()
     
     while True:
         clear_console()
         
         display_header()
-        choice = show_menu()
+        choice = menu.show_menu()
 
-        if choice == '1':
+        if choice == 1:
             subdomain.main_menu()
-        elif choice == '2':
+        elif choice == 2:
             ssl_inspector.run_ssl_inspector()
-        elif choice == '3':
+        elif choice == 3:
             vulnerability.run_vulnerability_scan()
-        elif choice == '4':
+        elif choice == 4:
            header_audit.HeaderAuditor().run()
-        elif choice == '5':
+        elif choice == 5:
             try:
                 asyncio.run(scraper.main_menu(HeaderFactory()))
             except KeyboardInterrupt:
                 console.print("\n[bold yellow]Program interrupted by user. Exiting.[/bold yellow]")         
-        elif choice == '6':
+        elif choice == 6:
             admin_finder.main()
-        elif choice == '7':
+        elif choice == 7:
             dir_bruteforcer.main()       
-        elif choice == '8':
+        elif choice == 8:
             try:
                 asyncio.run(port_scanner.main_menu()) 
             except KeyboardInterrupt:
                 console.print("\n[bold yellow]Program interrupted by user. Exiting.[/bold yellow]") 
-        elif choice == '9': 
+        elif choice == 9: 
             app = waf_test.WAFTUI()
             app.run()
-        elif choice == '10':
+        elif choice == 10:
             cors_scan.main()
-        elif choice == '11':
+        elif choice == 11:
             desync_tester.run()        
-        elif choice == '12':
+        elif choice == 12:
             console.print("[bold red]\n  Exiting... \n[/bold red]")
             sys.exit(0)
         else:
