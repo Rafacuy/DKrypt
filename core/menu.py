@@ -29,7 +29,7 @@ class MenuConfig:
     # Application metadata
     APP_NAME = "DKrypt"
     APP_TAGLINE = "Integrated Security Toolkit"
-    VERSION = "1.2.7"
+    VERSION = "1.2.8"
     STATUS = "STABLE"
     COPYRIGHT = "© 2025 DKrypt Security"
     
@@ -54,16 +54,17 @@ class MenuConfig:
     MENU_OPTIONS = [
         MenuOption(1, "Subdomain Scanner", "Comprehensively discover target subdomains", "reconnaissance"),
         MenuOption(2, "SSL/TLS Inspector", "Analyze website security certificates", "analysis"),
-        MenuOption(3, "Web Vuln Scanner", "Detect common web application vulnerabilities", "vulnerability"),
-        MenuOption(4, "Security Header Audit", "Evaluate HTTP security header implementation", "analysis"),
-        MenuOption(5, "Website Scraper", "Extract and analyze website content", "intelligence"),
-        MenuOption(6, "Admin Page Finder", "Locate hidden administrative interfaces", "discovery"),
-        MenuOption(7, "Directory Bruteforcer", "Search for hidden directories and files", "discovery"),
-        MenuOption(8, "Port Scanner", "Identify open ports and running services", "reconnaissance"),
-        MenuOption(9, "WAF Bypass Tester", "Test Web Application Firewall bypass techniques", "evasion"),
-        MenuOption(10, "CORS Misconfig Auditor", "Identify Cross-Origin Resource Sharing issues", "vulnerability"),
-        MenuOption(11, "HTTP Desync Tester", "Test for HTTP request smuggling vulnerabilities", "vulnerability"),
-        MenuOption(12, "Exit", "Terminate the application", "system")
+        MenuOption(3, "SQLI Scanner", "Detect SQLi injection vulnerability on a website", "vulnerability"),
+        MenuOption(4, "XSS Scanner", "Detect Cross-Site-Scripting Vulnerability on a website", "vulnerability"),
+        MenuOption(5, "Security Header Audit", "Evaluate HTTP security header implementation", "analysis"),
+        MenuOption(6, "Website Scraper", "Extract and analyze website content", "intelligence"),
+        MenuOption(7, "Admin Page Finder", "Locate hidden administrative interfaces", "discovery"),
+        MenuOption(8, "Directory Bruteforcer", "Search for hidden directories and files", "discovery"),
+        MenuOption(9, "Port Scanner", "Identify open ports and running services", "reconnaissance"),
+        MenuOption(10, "WAF Bypass Tester", "Test Web Application Firewall bypass techniques", "evasion"),
+        MenuOption(11, "CORS Misconfig Auditor", "Identify Cross-Origin Resource Sharing issues", "vulnerability"),
+        MenuOption(12, "HTTP Desync Tester", "Test for HTTP request smuggling vulnerabilities", "vulnerability"),
+        MenuOption(13, "Exit", "Terminate the application", "system")
     ]
 
 
