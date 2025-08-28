@@ -1,8 +1,7 @@
 #!/bin/bash
+# Installer Script
 
-# SENTRA Installer Script
 
-# ASCII Art for SENTRA
 function show_banner() {
     clear
     echo -e "\e[1;35m"
