@@ -30,7 +30,7 @@ class MenuConfig:
     APP_NAME = "DKrypt"
     APP_TAGLINE = "Integrated Security Toolkit"
     VERSION = "1.2.7"
-    STATUS = "BETA"
+    STATUS = "STABLE"
     COPYRIGHT = "© 2025 DKrypt Security"
     
     # Visual styling
@@ -211,8 +211,6 @@ class MenuRenderer:
         # Center the table
         centered_table = Align.center(menu_table)
         
-        # Use a Group to combine different renderable elements (like Text and Align)
-        # for the panel's content. This is the correct way to build complex layouts in Rich.
         panel_content = Group(
             Text("\n"),
             subtitle,
