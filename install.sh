@@ -86,7 +86,7 @@ function main() {
     install_dependencies
     
     echo
-    show_status "Installation complete! You can now run SENTRA."
+    show_status "Installation complete! You can now run DKrypt."
     echo
 }
 
