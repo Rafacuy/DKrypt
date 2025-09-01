@@ -57,7 +57,7 @@ class MenuConfig:
         MenuOption(3, "SQLI Scanner", "Detect SQLi injection vulnerability on a website", "vulnerability"),
         MenuOption(4, "XSS Scanner", "Detect Cross-Site-Scripting Vulnerability on a website", "vulnerability"),
         MenuOption(5, "Security Header Audit", "Evaluate HTTP security header implementation", "analysis"),
-        MenuOption(6, "Website Scraper", "Extract and analyze website content", "intelligence"),
+        MenuOption(6, "Website Crawler", "Extract and analyze website content", "intelligence"),
         MenuOption(7, "Admin Page Finder", "Locate hidden administrative interfaces", "discovery"),
         MenuOption(8, "Directory Bruteforcer", "Search for hidden directories and files", "discovery"),
         MenuOption(9, "Port Scanner", "Identify open ports and running services", "reconnaissance"),

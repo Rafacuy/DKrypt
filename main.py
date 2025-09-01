@@ -21,7 +21,13 @@ from core.randomizer import HeaderFactory
 from rich.console import Console
 from rich.layout import Layout
 from rich.panel import Panel
-from modules import subdomain, ssl_inspector, scraper, admin_finder, dir_bruteforcer, header_audit, port_scanner, waf_test, cors_scan, desync_tester, sqli_scan, xss_scan
+from modules import (subdomain, 
+                     ssl_inspector, admin_finder, 
+                     dir_bruteforcer, header_audit, 
+                     port_scanner, waf_test, cors_scan, 
+                     desync_tester, sqli_scan, xss_scan)
+
+from modules.crawler_engine import crawler_utils
 
 console = Console()
 
@@ -46,7 +52,7 @@ def main():
            header_audit.HeaderAuditor().run()
         elif choice == 6:
             try:
-                asyncio.run(scraper.main_menu(HeaderFactory()))
+                asyncio.run(crawler_utils.main())
             except KeyboardInterrupt:
                 console.print("\n[bold yellow]Program interrupted by user. Exiting.[/bold yellow]")         
         elif choice == 7:

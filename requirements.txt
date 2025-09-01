@@ -35,3 +35,9 @@ pyopenssl
 scapy
 
 aiodns
+
+selenium
+
+Appium-Python-Client
+
+webdriver-manager
