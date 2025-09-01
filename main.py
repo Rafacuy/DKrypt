@@ -24,10 +24,11 @@ from rich.panel import Panel
 from modules import (subdomain, 
                      ssl_inspector, admin_finder, 
                      dir_bruteforcer, header_audit, 
-                     port_scanner, waf_test, cors_scan, 
+                     port_scanner, cors_scan, 
                      desync_tester, sqli_scan, xss_scan)
 
 from modules.crawler_engine import crawler_utils
+from modules.waf_bypass import tui
 
 console = Console()
 
@@ -65,7 +66,7 @@ def main():
             except KeyboardInterrupt:
                 console.print("\n[bold yellow]Program interrupted by user. Exiting.[/bold yellow]") 
         elif choice == 10: 
-            app = waf_test.WAFTUI()
+            app = tui.WAFTUI()
             app.run()
         elif choice == 11:
             cors_scan.main()
