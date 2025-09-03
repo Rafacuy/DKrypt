@@ -21,7 +21,7 @@ from rich.progress import Progress, SpinnerColumn, BarColumn, TextColumn
 from rich.box import ROUNDED
 from rich.text import Text
 from rich.align import Align
-from core.utils import clear_console, load_wordlist
+from core.utils import clear_console, load_wordlist, header_banner
 
 # Optional: SOCKS proxy support
 try:
@@ -128,12 +128,6 @@ class DNSScanner:
 
 # --- TUI & Main Logic ---
 
-def display_banner():
-    """Displays the application banner."""
-    banner_text = Text("Subdomain Scanner", style="bold cyan", justify="center")
-    panel = Panel(banner_text, box=ROUNDED, border_style="magenta", padding=(1, 2))
-    console.print(panel)
-
 def get_scan_config(scanner):
     """Prompts user for rate limit and proxy settings."""
     rate_limit = IntPrompt.ask("[bold]Enter rate limit (concurrent requests)[/]", default=50)
@@ -233,7 +227,7 @@ def main_menu():
 
     while True:
         clear_console()
-        display_banner()
+        header_banner(tool_name="Subdomain Scanner")
         
         menu_text = (
             "[1] Single URL Scan\n"

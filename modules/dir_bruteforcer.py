@@ -8,7 +8,7 @@ from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn, TimeEl
 from rich.panel import Panel
 from colorama import init, Fore, Style
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from core.utils import load_wordlist, clear_console
+from core.utils import load_wordlist, clear_console, header_banner
 
 # Initialize colorama 
 init()
@@ -105,8 +105,7 @@ def main():
     clear_console()
     init(autoreset=True) # Initialize colorama
     
-    console.print(Panel.fit("[bold cyan]Directory Bruteforcer[/bold cyan]", 
-                         style="blue", border_style="dim", padding=(1, 4)))
+    header_banner(tool_name="Dir Bruteforcer")
 
     # --- Get Target URL ---
     base_url = console.input("[bold yellow]Enter the target URL (e.g., https://example.com):[/bold yellow] ").strip()

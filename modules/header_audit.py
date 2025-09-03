@@ -19,7 +19,7 @@ from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
 from rich.text import Text
-from core.utils import clear_console, sanitize_filename
+from core.utils import clear_console, sanitize_filename, header_banner
 
 # ---- Core Components ----
 console = Console()
@@ -351,14 +351,6 @@ class HeaderAuditor:
         self.allow_private = False
         self.timeout = 15
 
-    def _print_banner(self):
-        clear_console()
-        console.print(Panel.fit(
-            '[bold magenta]HTTP Security Header Auditor[/bold magenta]\n'
-            '[cyan]v2.0 - Redirect Analysis & Batch Processing[/cyan]',
-            padding=(1, 2)
-        ))
-
     def _get_main_menu_choice(self) -> str:
         console.print("\n[bold]Main Menu[/bold]")
         console.print("1. Single URL Scan")
@@ -370,7 +362,8 @@ class HeaderAuditor:
     def run(self):
         """Main application loop."""
         while True:
-            self._print_banner()
+            clear_console()
+            header_banner(tool_name="Header Auditor")
             choice = self._get_main_menu_choice()
             if choice == '1':
                 self.run_single_scan()
@@ -432,7 +425,7 @@ class HeaderAuditor:
 
     def run_batch_scan(self):
         """Handles the logic for scanning multiple URLs from a file."""
-        self._print_banner()
+        clear_console()
         console.print(Panel.fit("[bold]Batch URL Scan[/bold]"))
         
         while True:

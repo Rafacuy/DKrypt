@@ -22,7 +22,7 @@ from rich.table import Table
 from rich.prompt import IntPrompt, Prompt, Confirm
 
 from core.randomizer import HeaderFactory
-from core.utils import clear_console
+from core.utils import clear_console, header_banner
 
 from .config_ui import (console, get_crawl_config, get_output_choice,
                         display_results, save_to_file)
@@ -206,12 +206,7 @@ async def main_menu():
             break
 
         clear_console()
-        console.print(Panel.fit(
-            '[bold magenta]🚀 Web Crawler Engine 🚀[/bold magenta]\n\n'
-            'Select an option to begin:',
-            padding=(1, 2),
-            title="Main Menu"
-        ))
+        header_banner(tool_name="Web Crawler")
 
         console.print("\n[bold]1.[/bold] Crawl a single URL")
         console.print("[bold]2.[/bold] Crawl URLs from a file (Batch Mode)")

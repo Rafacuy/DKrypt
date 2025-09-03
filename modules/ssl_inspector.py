@@ -13,7 +13,7 @@ from cryptography.hazmat.primitives.asymmetric import rsa, ec, dsa
 from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
-from core.utils import clear_console
+from core.utils import clear_console, header_banner
 
 console = Console()
 
@@ -393,12 +393,7 @@ def check_security_features(host: str, port: int) -> Dict:
 def run_ssl_inspector():
     """Main function to run the SSL/TLS inspection."""
     clear_console()
-    console.print(Panel.fit(
-        "[b]🔒 SSL/TLS Security Inspector[/b]",
-        style="bold #00a8ff",
-        border_style="#00a8ff",
-        padding=(1, 2)
-    ))
+    header_banner(tool_name="SSL Inspector")
     
     while True:
         target = console.input("\n[bold]➤ Enter target (e.g., google.com:443): [/]").strip()

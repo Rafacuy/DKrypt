@@ -17,6 +17,7 @@ from rich.progress import Progress, SpinnerColumn, BarColumn, TextColumn
 from rich.prompt import Confirm, Prompt
 from datetime import datetime
 from core.randomizer import HeaderFactory
+from core.utils import header_banner, clear_console
 
 console = Console()
 header_factory = HeaderFactory(pool_size=500)
@@ -553,7 +554,9 @@ class SQLiScanner:
 
     def run_comprehensive_scan(self):
         """Main enhanced scanning function"""
-        console.print(Panel.fit("[b]Enhanced SQL Injection (SQLi) Scanner v2.0[/b]", style="#ff7675", padding=(1, 2)))
+        
+        clear_console()
+        header_banner(tool_name="SQLi Scanner")
         
         # Get target URL
         url = console.input("\n[bold]Enter target URL: [/]").strip()

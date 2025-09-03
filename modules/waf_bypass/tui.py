@@ -22,7 +22,7 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 from .waf_runner import WAFBypassTester, TestResult
 from engine.baseline import BaselineCapture
 from .waf_utils import ScanResults, PROFILES_DIR, console, clear_console
-
+from core.utils import clear_console, header_banner
 
 class WAFTUI:
     """Terminal User Interface"""
@@ -45,7 +45,8 @@ class WAFTUI:
     
     def _main_loop(self):
         """Main application loop"""
-        self._show_header()
+        clear_console()
+        header_banner(tool_name="WAF Bypass Tester")
         
         if not self._configure_target():
             return

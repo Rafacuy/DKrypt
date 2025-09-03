@@ -20,6 +20,8 @@ from rich.panel import Panel
 from rich.prompt import Prompt, IntPrompt
 from rich.text import Text
 
+from core.utils import header_banner
+
 # Suppress ResourceWarning for unclosed sockets in async operations
 import warnings
 warnings.filterwarnings("ignore", category=ResourceWarning, message="unclosed.*")
@@ -389,12 +391,7 @@ async def main_menu():
     """Displays the main interactive menu."""
     while True:
         clear_console()
-        header = Panel.fit(
-            '[bold magenta]Port Scanner[/bold magenta]\n',
-            padding=(1, 2)
-        )
-
-        CONSOLE.print(header)
+        header_banner(tool_name="Port Scanner")
 
         menu_table = Table.grid(padding=(1, 2))
         menu_table.add_column(style="bold cyan")

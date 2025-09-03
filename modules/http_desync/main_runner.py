@@ -14,6 +14,7 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 # Imports from other modules
 from engine.payload_generator import ModernPayloadGenerator, TargetValidator
 from engine.smuggler import RequestSmuggler
+from core.utils import clear_console, header_banner
 
 # Import the randomizer module for stealth headers
 try:
@@ -22,12 +23,8 @@ try:
 except ImportError:
     RANDOMIZER_AVAILABLE = False
 
-try:
-    from core.utils import clear_console
-except ImportError:
-    def clear_console():
-        import os
-        os.system('cls' if os.name == 'nt' else 'clear')
+
+
 
 # ============================================================================
 # UTILITIES & MAIN RUNNER
@@ -53,11 +50,7 @@ def run():
     
     try:
         clear_console()
-        # Display welcome and gather target information
-        console.print(Panel(
-            "[bold green]HTTP Desync Tester - Configuration[/bold green]\n\n",
-            border_style="green"
-        ))
+        header_banner(tool_name="HTTP Desync")
 
         # Target URL input with validation
         while True:

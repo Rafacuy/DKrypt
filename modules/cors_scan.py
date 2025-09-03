@@ -21,7 +21,7 @@ from rich.prompt import Prompt, Confirm
 import time
 
 from core.randomizer import HeaderFactory
-from core.utils import clear_console
+from core.utils import clear_console, header_banner
 
 console = Console()
 
@@ -764,7 +764,7 @@ def main():
         
         clear_console()
         
-        console.print(Panel("[cyan]CORS Misconfiguration Auditor[/cyan]"))
+        header_banner(tool_name="CORS Misconfig Scanner")
         
         # Get target URL from user
         target_url = get_target_url()

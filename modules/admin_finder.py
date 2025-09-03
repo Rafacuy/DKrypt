@@ -11,7 +11,7 @@ from rich import print
 from requests.exceptions import RequestException
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from tenacity import retry, stop_after_attempt, wait_exponential
-from core.utils import clear_console, load_wordlist
+from core.utils import clear_console, load_wordlist, header_banner
 
 # Inisialisasi Rich Console
 console = Console()
@@ -32,11 +32,6 @@ USER_AGENTS = [
 ]
 
 # --- Fungsi Utilitas ---
-
-def print_banner():
-    """Menampilkan banner aplikasi."""
-    console.print(Panel.fit("[b]Admin Page Finder - Enhanced[/b]", 
-                         style="#51CBD1", padding=(1, 2)))
 
 def check_wordlist():
     """Memeriksa apakah file wordlist ada."""
@@ -121,7 +116,7 @@ def test_admin_page(url, session):
 def main():
     """Fungsi utama untuk menjalankan alat."""
     clear_console()
-    print_banner()
+    header_banner(tool_name = "Admin Finder")
     
     if not check_wordlist():
         return

@@ -10,6 +10,7 @@ from rich.table import Table
 from rich.live import Live
 from rich.progress import Progress, SpinnerColumn, BarColumn, TextColumn
 from core.randomizer import HeaderFactory
+from core.utils import clear_console, header_banner
 
 console = Console()
 
@@ -78,7 +79,8 @@ def run_xss_scan():
     """
     Main function to execute the Cross-Site Scripting (XSS) vulnerability scan.
     """
-    console.print(Panel.fit("[b]Cross-Site Scripting (XSS) Scanner[/b]", style="#ff7675", padding=(1, 2)))
+    clear_console()
+    header_banner(tool_name="XSS Scanner")
     url = console.input("\n[bold]Enter target URL: [/]").strip()
     if not url.startswith(('http://', 'https://')):
         url = 'https://' + url
