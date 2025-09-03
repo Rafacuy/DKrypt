@@ -25,10 +25,11 @@ from modules import (subdomain,
                      ssl_inspector, admin_finder, 
                      dir_bruteforcer, header_audit, 
                      port_scanner, cors_scan, 
-                     desync_tester, sqli_scan, xss_scan)
+                     sqli_scan, xss_scan)
 
 from modules.crawler_engine import crawler_utils
 from modules.waf_bypass import tui
+from modules.http_desync import main_runner
 
 console = Console()
 
@@ -71,7 +72,7 @@ def main():
         elif choice == 11:
             cors_scan.main()
         elif choice == 12:
-            desync_tester.run()        
+            main_runner.run()        
         elif choice == 13:
             console.print("[bold red]\n  Exiting... \n[/bold red]")
             sys.exit(0)
