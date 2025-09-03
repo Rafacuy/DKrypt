@@ -4,3 +4,6 @@ __pycache__/
 .env
 *.log
 reports/
+Thumbs.db
+dist/
+.DS_Store
