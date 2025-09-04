@@ -379,7 +379,6 @@ class HeaderAuditor:
 
     def run_single_scan(self):
         """Handles the logic for scanning a single URL."""
-        self._print_banner()
         console.print(Panel.fit("[bold]Single URL Scan[/bold]"))
         
         while True:
