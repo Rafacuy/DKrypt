@@ -64,7 +64,8 @@ class MenuConfig:
         MenuOption(10, "WAF Bypass Tester", "Test Web Application Firewall bypass techniques", "evasion"),
         MenuOption(11, "CORS Misconfig Auditor", "Identify Cross-Origin Resource Sharing issues", "vulnerability"),
         MenuOption(12, "HTTP Desync Tester", "Test for HTTP request smuggling vulnerabilities", "vulnerability"),
-        MenuOption(13, "Exit", "Terminate the application", "system")
+        MenuOption(13, "Tracepulse", "Trace the route and identify network problems", "analysis"),
+        MenuOption(14, "Exit", "Terminate the application", "system")
     ]
 
 
