@@ -30,7 +30,7 @@ DKrypt is an advanced, all-in-one penetration testing framework designed for sec
 - **Security Header Audit**: _Analyze HTTP response headers for security best practices._
 - **SSL/TLS Inspector**: _Get deep insights into SSL/TLS certificate configurations._
 - **Website Crawler**: _Extract page content and links quickly._
-- **Admin Page Finder**: _Discover admin page on the target web servers._
+- **JS Crawler & Endpoint Extractor**: _Extract a endpoints and analyze API Key/Token within JS file._
 - **Port Scanner**: _Discover hidden port on the target website._
 - **WAF Bypass tester**: _Bypass WAF on a website to find weaknesses on the website's WAF._
 - **CORS Misconfiguration Auditor**: _Find a vulnerabilites on the CORS Configuration._

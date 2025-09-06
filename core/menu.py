@@ -57,14 +57,14 @@ class MenuConfig:
         MenuOption(3, "SQLI Scanner", "Detect SQLi injection vulnerability on a website", "vulnerability"),
         MenuOption(4, "XSS Scanner", "Detect Cross-Site-Scripting Vulnerability on a website", "vulnerability"),
         MenuOption(5, "Security Header Audit", "Evaluate HTTP security header implementation", "analysis"),
-        MenuOption(6, "Website Crawler", "Extract and analyze website content", "intelligence"),
-        MenuOption(7, "Admin Page Finder", "Locate hidden administrative interfaces", "discovery"),
-        MenuOption(8, "Directory Bruteforcer", "Search for hidden directories and files", "discovery"),
-        MenuOption(9, "Port Scanner", "Identify open ports and running services", "reconnaissance"),
-        MenuOption(10, "WAF Bypass Tester", "Test Web Application Firewall bypass techniques", "evasion"),
-        MenuOption(11, "CORS Misconfig Auditor", "Identify Cross-Origin Resource Sharing issues", "vulnerability"),
-        MenuOption(12, "HTTP Desync Tester", "Test for HTTP request smuggling vulnerabilities", "vulnerability"),
-        MenuOption(13, "Tracepulse", "Trace the route and identify network problems", "analysis"),
+        MenuOption(6, "Website Crawler", "Extract and analyze website content", "discovery"),
+        MenuOption(7, "Directory Bruteforcer", "Search for hidden directories and files", "discovery"),
+        MenuOption(8, "Port Scanner", "Identify open ports and running services", "reconnaissance"),
+        MenuOption(9, "WAF Bypass Tester", "Test Web Application Firewall bypass techniques", "evasion"),
+        MenuOption(10, "CORS Misconfig Auditor", "Identify Cross-Origin Resource Sharing issues", "vulnerability"),
+        MenuOption(11, "HTTP Desync Tester", "Test for HTTP request smuggling vulnerabilities", "vulnerability"),
+        MenuOption(12, "Tracepulse", "Trace the route and identify network problems", "analysis"),
+        MenuOption(13, "JS Crawler", "Find & extract endpoints within website", "reconnaissance"),
         MenuOption(14, "Exit", "Terminate the application", "system")
     ]
 
