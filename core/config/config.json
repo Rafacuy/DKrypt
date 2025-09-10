@@ -1,0 +1,284 @@
+{
+    "referer_categories": {
+      "search_engine": {
+        "urls": [
+          "https://www.google.com/",
+          "https://www.google.co.uk/",
+          "https://www.google.com.au/",
+          "https://www.google.ca/",
+          "https://www.bing.com/",
+          "https://search.yahoo.com/",
+          "https://duckduckgo.com/",
+          "https://www.ecosia.org/",
+          "https://yandex.com/",
+          "https://yandex.ru/",
+          "https://www.baidu.com/",
+          "https://www.ask.com/",
+          "https://search.brave.com/",
+          "https://www.startpage.com/",
+          "https://searx.org/"
+        ],
+        "weight": 0.32
+      },
+      "social_media": {
+        "urls": [
+          "https://www.facebook.com/",
+          "https://m.facebook.com/",
+          "https://www.twitter.com/",
+          "https://x.com/",
+          "https://t.co/",
+          "https://www.reddit.com/",
+          "https://old.reddit.com/",
+          "https://www.instagram.com/",
+          "https://www.linkedin.com/",
+          "https://www.tiktok.com/",
+          "https://www.pinterest.com/",
+          "https://www.snapchat.com/",
+          "https://discord.com/",
+          "https://www.youtube.com/",
+          "https://m.youtube.com/",
+          "https://www.twitch.tv/",
+          "https://www.threads.net/",
+          "https://mastodon.social/"
+        ],
+        "weight": 0.26
+      },
+      "tech_edu": {
+        "urls": [
+          "https://stackoverflow.com/",
+          "https://github.com/",
+          "https://gitlab.com/",
+          "https://news.ycombinator.com/",
+          "https://medium.com/",
+          "https://www.quora.com/",
+          "https://dev.to/",
+          "https://www.coursera.org/",
+          "https://www.udemy.com/",
+          "https://www.edx.org/",
+          "https://www.khanacademy.org/",
+          "https://www.codecademy.com/",
+          "https://www.freecodecamp.org/",
+          "https://www.w3schools.com/",
+          "https://docs.python.org/",
+          "https://developer.mozilla.org/",
+          "https://www.geeksforgeeks.org/"
+        ],
+        "weight": 0.16
+      },
+      "news": {
+        "urls": [
+          "https://www.bbc.com/",
+          "https://www.bbc.co.uk/",
+          "https://www.nytimes.com/",
+          "https://www.cnn.com/",
+          "https://www.theguardian.com/",
+          "https://www.reuters.com/",
+          "https://www.npr.org/",
+          "https://www.aljazeera.com/",
+          "https://www.washingtonpost.com/",
+          "https://www.wsj.com/",
+          "https://www.bloomberg.com/",
+          "https://techcrunch.com/",
+          "https://www.wired.com/",
+          "https://arstechnica.com/",
+          "https://www.theverge.com/"
+        ],
+        "weight": 0.14
+      },
+      "ecommerce": {
+        "urls": [
+          "https://www.amazon.com/",
+          "https://www.amazon.co.uk/",
+          "https://www.amazon.de/",
+          "https://www.ebay.com/",
+          "https://www.alibaba.com/",
+          "https://www.aliexpress.com/",
+          "https://www.shopify.com/",
+          "https://www.etsy.com/",
+          "https://www.walmart.com/",
+          "https://www.target.com/",
+          "https://www.bestbuy.com/",
+          "https://www.newegg.com/"
+        ],
+        "weight": 0.12
+      }
+    },
+    "geo_ip_ranges": {
+      "north_america": [
+        ["8.0.0.0", "8.255.255.255"],
+        ["23.0.0.0", "31.255.255.255"],
+        ["50.0.0.0", "55.255.255.255"],
+        ["63.0.0.0", "76.255.255.255"],
+        ["96.0.0.0", "99.255.255.255"],
+        ["108.0.0.0", "108.255.255.255"],
+        ["162.0.0.0", "169.255.255.255"],
+        ["184.0.0.0", "191.255.255.255"],
+        ["198.0.0.0", "199.255.255.255"],
+        ["208.0.0.0", "215.255.255.255"]
+      ],
+      "europe": [
+        ["2.0.0.0", "2.255.255.255"],
+        ["5.0.0.0", "5.255.255.255"],
+        ["31.0.0.0", "31.255.255.255"],
+        ["37.0.0.0", "37.255.255.255"],
+        ["46.0.0.0", "46.255.255.255"],
+        ["77.0.0.0", "95.255.255.255"],
+        ["109.0.0.0", "109.255.255.255"],
+        ["176.0.0.0", "188.255.255.255"],
+        ["194.0.0.0", "195.255.255.255"],
+        ["212.0.0.0", "213.255.255.255"]
+      ],
+      "asia_pacific": [
+        ["1.0.0.0", "1.255.255.255"],
+        ["14.0.0.0", "14.255.255.255"],
+        ["27.0.0.0", "27.255.255.255"],
+        ["36.0.0.0", "36.255.255.255"],
+        ["42.0.0.0", "43.255.255.255"],
+        ["58.0.0.0", "61.255.255.255"],
+        ["101.0.0.0", "126.255.255.255"],
+        ["133.0.0.0", "133.255.255.255"],
+        ["202.0.0.0", "223.255.255.255"]
+      ],
+      "africa": [
+        ["41.0.0.0", "41.255.255.255"],
+        ["102.0.0.0", "105.255.255.255"],
+        ["129.0.0.0", "129.255.255.255"],
+        ["154.0.0.0", "154.255.255.255"],
+        ["196.0.0.0", "197.255.255.255"]
+      ],
+      "south_america": [
+        ["177.0.0.0", "191.255.255.255"],
+        ["200.0.0.0", "201.255.255.255"]
+      ],
+      "middle_east": [
+        ["37.0.0.0", "37.255.255.255"],
+        ["78.0.0.0", "78.255.255.255"],
+        ["85.0.0.0", "85.255.255.255"],
+        ["185.0.0.0", "185.255.255.255"]
+      ]
+    },
+    "ipv6_prefixes": [
+      "2001", "2002", "2003", "2400", "2401", "2402", "2403", "2404", "2405", "2406",
+      "2407", "2408", "2409", "240a", "240b", "240c", "240d", "240e", "240f", "2600",
+      "2601", "2602", "2603", "2604", "2605", "2606", "2607", "2608", "2610", "2620",
+      "2800", "2801", "2802", "2803", "2804", "2805", "2806", "2a00", "2a01", "2a02",
+      "2a03", "2a04", "2a05", "2a06", "2a07", "2a08", "2a09", "2a0a", "2a0b", "2a0c",
+      "2a0d", "2a0e", "2a0f", "2a10", "2c00", "2c0f"
+    ],
+    "browser_profiles": [
+      {
+        "name": "Chrome_Windows_Latest",
+        "headers": {
+          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/{version}.0.0.0 Safari/537.36",
+          "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
+          "Accept-Language": "en-US,en;q=0.9",
+          "Sec-CH-UA": "\"Chromium\";v=\"{version}\", \"Google Chrome\";v=\"{version}\", \"Not-A.Brand\";v=\"99\"",
+          "Sec-CH-UA-Mobile": "?0",
+          "Sec-CH-UA-Platform": "\"Windows\""
+        },
+        "versions": ["131", "130", "129", "128", "127"],
+        "weight": 0.28
+      },
+      {
+        "name": "Chrome_Windows_Stable",
+        "headers": {
+          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/{version}.0.0.0 Safari/537.36",
+          "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
+          "Accept-Language": "en-US,en;q=0.9",
+          "Sec-CH-UA": "\"Google Chrome\";v=\"{version}\", \"Chromium\";v=\"{version}\", \"Not=A?Brand\";v=\"24\"",
+          "Sec-CH-UA-Mobile": "?0",
+          "Sec-CH-UA-Platform": "\"Windows\""
+        },
+        "versions": ["120", "121", "122", "123", "124", "125", "126"],
+        "weight": 0.18
+      },
+      {
+        "name": "Firefox_Windows_Latest",
+        "headers": {
+          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:{version}.0) Gecko/20100101 Firefox/{version}.0",
+          "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+          "Accept-Language": "en-US,en;q=0.5"
+        },
+        "versions": ["131", "130", "129", "128", "127"],
+        "weight": 0.15
+      },
+      {
+        "name": "Firefox_Windows_ESR",
+        "headers": {
+          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:{version}.0) Gecko/20100101 Firefox/{version}.0",
+          "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+          "Accept-Language": "en-US,en;q=0.5"
+        },
+        "versions": ["115", "128"],
+        "weight": 0.08
+      },
+      {
+        "name": "Edge_Windows_Latest",
+        "headers": {
+          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/{chrome_ver}.0.0.0 Safari/537.36 Edg/{version}.0.0.0",
+          "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
+          "Accept-Language": "en-US,en;q=0.9",
+          "Sec-CH-UA": "\"Microsoft Edge\";v=\"{version}\", \"Chromium\";v=\"{chrome_ver}\", \"Not-A.Brand\";v=\"99\"",
+          "Sec-CH-UA-Mobile": "?0",
+          "Sec-CH-UA-Platform": "\"Windows\""
+        },
+        "versions": ["131", "130", "129", "128", "127"],
+        "chrome_versions": ["131", "130", "129", "128", "127"],
+        "weight": 0.12
+      },
+      {
+        "name": "Safari_macOS_Latest",
+        "headers": {
+          "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/{version}.1 Safari/605.1.15",
+          "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+          "Accept-Language": "en-US,en;q=0.9"
+        },
+        "versions": ["18", "17", "16"],
+        "weight": 0.08
+      },
+      {
+        "name": "Chrome_Android_Latest",
+        "headers": {
+          "User-Agent": "Mozilla/5.0 (Linux; Android 13; Pixel 7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/{version}.0.0.0 Mobile Safari/537.36",
+          "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
+          "Accept-Language": "en-US,en;q=0.9",
+          "Sec-CH-UA": "\"Google Chrome\";v=\"{version}\", \"Chromium\";v=\"{version}\", \"Not-A.Brand\";v=\"99\"",
+          "Sec-CH-UA-Mobile": "?1",
+          "Sec-CH-UA-Platform": "\"Android\""
+        },
+        "versions": ["131", "130", "129", "128"],
+        "weight": 0.06
+      },
+      {
+        "name": "Safari_iOS_Latest",
+        "headers": {
+          "User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/{version}.0 Mobile/15E148 Safari/604.1",
+          "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+          "Accept-Language": "en-US,en;q=0.9"
+        },
+        "versions": ["18", "17", "16"],
+        "weight": 0.04
+      },
+      {
+        "name": "Opera_Windows_Latest",
+        "headers": {
+          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/{chrome_ver}.0.0.0 Safari/537.36 OPR/{version}.0.0.0",
+          "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
+          "Accept-Language": "en-US,en;q=0.9",
+          "Sec-CH-UA": "\"Opera\";v=\"{version}\", \"Chromium\";v=\"{chrome_ver}\", \"Not-A.Brand\";v=\"99\"",
+          "Sec-CH-UA-Mobile": "?0",
+          "Sec-CH-UA-Platform": "\"Windows\""
+        },
+        "versions": ["115", "114", "113", "112"],
+        "chrome_versions": ["129", "128", "127", "126"],
+        "weight": 0.03
+      }
+    ],
+    "pool_settings": {
+      "default_size": 5000,
+      "lazy_generation": true,
+      "parallel_workers": 6,
+      "generation_timeout": 45
+    }
+  }
+  

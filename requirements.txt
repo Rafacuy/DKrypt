@@ -41,3 +41,5 @@ selenium
 Appium-Python-Client
 
 webdriver-manager
+
+pyyaml
