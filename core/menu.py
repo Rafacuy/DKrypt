@@ -29,8 +29,8 @@ class MenuConfig:
     # Application metadata
     APP_NAME = "DKrypt"
     APP_TAGLINE = "Integrated Security Toolkit"
-    VERSION = "1.2.8"
-    STATUS = "STABLE"
+    VERSION = "1.3.0"
+    STATUS = "BETA"
     COPYRIGHT = "© 2025 DKrypt Security"
     
     # Visual styling
@@ -65,7 +65,8 @@ class MenuConfig:
         MenuOption(11, "HTTP Desync Tester", "Test for HTTP request smuggling vulnerabilities", "vulnerability"),
         MenuOption(12, "Tracepulse", "Trace the route and identify network problems", "analysis"),
         MenuOption(13, "JS Crawler", "Find & extract endpoints within website", "reconnaissance"),
-        MenuOption(14, "Exit", "Terminate the application", "system")
+        MenuOption(14, "Python Obfuscator", "Protect a python code & make it unreadable", "discovery"),
+        MenuOption(15, "Exit", "Terminate the application", "system")
     ]
 
 

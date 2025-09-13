@@ -9,7 +9,8 @@ from core.banner import display_header
 from modules import (
     subdomain, ssl_inspector,
     dir_bruteforcer, header_audit, port_scanner,
-    cors_scan, sqli_scan, xss_scan, tracepulse, jscrawler
+    cors_scan, sqli_scan, xss_scan, tracepulse, 
+    jscrawler, py_obfuscator
 )
 from modules.crawler_engine import crawler_utils
 from modules.waf_bypass import tui
@@ -52,6 +53,8 @@ def run_tui():
         elif choice == 13:
             jscrawler.main()    
         elif choice == 14:
+            py_obfuscator.main()
+        elif choice == 15:
             console.print("[bold red]\n  Exiting... \n[/bold red]")
             sys.exit(0)
         else:
@@ -88,6 +91,8 @@ def run_cli(arg: str):
         tracepulse.main()
     elif arg == "js-crawler":
         jscrawler.main()    
+    elif arg == "py-obfuscator":
+        py_obfuscator.main()    
     else:
         console.print(f"[red]Unknown module: {arg}[/red]")
 

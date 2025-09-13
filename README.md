@@ -37,6 +37,7 @@ DKrypt is an advanced, all-in-one penetration testing framework designed for sec
 - **HTTP Desync Attack Tester**: _Manipulating header content to inject hidden requests._
 - **SQLi Scanner**: _Scan for SQLi vulnerability within website._
 - **XSS Scanner**: _Scan for XSS vulnerability within website._
+- **Python Obfuscator**: _Protect a python file and make it unreadable._
 - **Tracepulse**: _Trace the route and identify a network problems._
 
 ---
