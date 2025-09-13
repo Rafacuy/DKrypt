@@ -1,11 +1,6 @@
 # config_ui.py
 """
-This module handles all user-facing components, including:
-- Configuration data classes (AndroidConfig, CrawlConfig).
-- User input prompts for setting up the crawl (get_crawl_config).
-- Functions for displaying and saving results (display_results, save_to_file).
-- The main menu interface (main_menu).
-- A shared Rich Console instance.
+This module handles all user-facing components
 """
 import os
 import json

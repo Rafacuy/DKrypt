@@ -2,10 +2,6 @@
 """
 This module serves as the main entry point and contains utility functions,
 validation logic, and the primary application control flow.
-- GracefulShutdownHandler: Manages Ctrl+C and other termination signals.
-- CrawlStatistics: Tracks metrics about a crawl session.
-- Validation functions: Check for dependencies and browser driver availability.
-- Main application loop and entry point.
 """
 import asyncio
 import signal
@@ -26,7 +22,7 @@ from core.utils import clear_console, header_banner
 
 from .config_ui import (console, get_crawl_config, get_output_choice,
                         display_results, save_to_file)
-from .core_crawler import EnhancedWebCrawler
+from .core_crawler import WebCrawler
 
 
 # --- Signal Handling for Graceful Shutdown ---
@@ -36,9 +32,9 @@ class GracefulShutdownHandler:
 
     def __init__(self):
         self.shutdown_event = asyncio.Event()
-        self.crawlers: List[EnhancedWebCrawler] = []
+        self.crawlers: List[WebCrawler] = []
 
-    def register_crawler(self, crawler: EnhancedWebCrawler):
+    def register_crawler(self, crawler: WebCrawler):
         """Register a crawler for shutdown handling."""
         self.crawlers.append(crawler)
 
@@ -275,7 +271,7 @@ async def main_menu():
 
             # Start crawling with proper resource management
             try:
-                async with EnhancedWebCrawler(config, header_factory) as crawler:
+                async with WebCrawler(config, header_factory) as crawler:
                     shutdown_handler.register_crawler(crawler)
                     results = await crawler.crawl_urls(urls_to_crawl)
 

@@ -1,15 +1,12 @@
 # core_crawler.py
 """
 This module contains the core web crawling and scraping logic.
-- RobotsTxtChecker: Handles robots.txt compliance.
-- BrowserManager: Manages Selenium/Appium browser instances for JS rendering.
-- EnhancedWebCrawler: The main class orchestrating the crawl, including
-  fetching, parsing, and data extraction.
 """
 import asyncio
 import os
 import re
 import tempfile
+import socket
 import urllib.robotparser
 import weakref
 from collections import deque
@@ -18,6 +15,7 @@ from urllib.parse import urljoin, urlparse, urlunparse
 
 import aiohttp
 import phonenumbers
+from aiodns import DNSResolver
 from appium import webdriver as appium_webdriver
 from appium.options.android import UiAutomator2Options
 from bs4 import BeautifulSoup
@@ -81,9 +79,7 @@ class RobotsTxtChecker:
             return rp.can_fetch(user_agent, url) if rp else True
 
         except Exception:
-            # If any error in robots.txt checking, allow the request
             return True
-
 
 class BrowserManager:
     """Manages browser instances for JavaScript rendering with proper resource management."""
@@ -263,8 +259,8 @@ class BrowserManager:
                     self._is_closed = True
 
 
-class EnhancedWebCrawler:
-    """Enhanced web crawler with multi-layer crawling and JavaScript rendering."""
+class WebCrawler:
+    """web crawler with multi-layer crawling and JavaScript rendering."""
 
     def __init__(self, config: CrawlConfig, header_factory: HeaderFactory):
         self.config = config
@@ -286,11 +282,13 @@ class EnhancedWebCrawler:
             sock_read=self.config.request_timeout
         )
 
+        resolver = DNSResolver(nameservers=["1.1.1.1", "8.8.8.8"])
         connector = aiohttp.TCPConnector(
             limit=self.config.max_concurrent,
             limit_per_host=10,
             ttl_dns_cache=300,
             use_dns_cache=True,
+            resolver=resolver,
         )
 
         self.session = aiohttp.ClientSession(
