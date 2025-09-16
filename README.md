@@ -61,7 +61,7 @@ pip install -r requirements.txt
 
 3. **Run DKrypt**
 ```bash
-python main.py
+python dkrypt.py
 ```
 
 ### Trouble installing on Termux?

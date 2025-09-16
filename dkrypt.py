@@ -9,12 +9,13 @@ from core.banner import display_header
 from modules import (
     subdomain, ssl_inspector,
     dir_bruteforcer, header_audit, port_scanner,
-    cors_scan, sqli_scan, xss_scan, tracepulse, 
+    cors_scan, sqli_scan, tracepulse, 
     jscrawler, py_obfuscator
 )
 from modules.crawler_engine import crawler_utils
 from modules.waf_bypass import tui
 from modules.http_desync import main_runner
+from modules.xss import scanner
 
 console = Console()
 
@@ -32,7 +33,7 @@ def run_tui():
         elif choice == 3:
             sqli_scan.run_sqli_scan()
         elif choice == 4:
-            xss_scan.run_xss_scan()
+            asyncio.run(scanner.run_xss_scan())
         elif choice == 5:
             header_audit.HeaderAuditor().run()
         elif choice == 6:
@@ -67,7 +68,7 @@ def run_cli(arg: str):
     if arg == "sqli":
         sqli_scan.run_sqli_scan()
     elif arg == "xss":
-        xss_scan.run_xss_scan()
+        asyncio.run(scanner.run_xss_scan())
     elif arg == "portscanner":
         asyncio.run(port_scanner.main_menu())
     elif arg == "waftester":
