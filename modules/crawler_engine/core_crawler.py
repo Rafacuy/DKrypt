@@ -15,7 +15,6 @@ from urllib.parse import urljoin, urlparse, urlunparse
 
 import aiohttp
 import phonenumbers
-from aiodns import DNSResolver
 from appium import webdriver as appium_webdriver
 from appium.options.android import UiAutomator2Options
 from bs4 import BeautifulSoup
@@ -282,7 +281,8 @@ class WebCrawler:
             sock_read=self.config.request_timeout
         )
 
-        resolver = DNSResolver(nameservers=["1.1.1.1", "8.8.8.8"])
+        resolver = aiohttp.AsyncResolver(nameservers=['1.1.1.1', '8.8.8.8', '8.8.4.4'])
+        
         connector = aiohttp.TCPConnector(
             limit=self.config.max_concurrent,
             limit_per_host=10,
