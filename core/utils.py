@@ -3,11 +3,19 @@ import os
 import re
 import random
 from rich.console import Console
-from rich.text import Text
-from rich.panel import Panel
+import colorama
+from colorama import Fore,Style,init
+from .menu import MenuConfig
+
+init()
 
 console = Console()
 
+# --- Config ---
+VERSION = MenuConfig().VERSION
+STATUS = MenuConfig().STATUS
+
+# --- Colors and ASCII arts ---
 COLORS = ["bright_cyan", "bright_green", "bright_magenta", "bright_yellow", "bright_red", "bright_blue"]
 ASCII_ARTS = [
     r"""
@@ -159,9 +167,6 @@ v  |/  V  V  V   V  \+\|*|**|*|/+/  V   v  V  V  \|  v
 ~---~~~~----~~~~             ~~
     """,
     r"""
-    
-    """,
-    r"""
             ______________
       ,===:'.,            `-._
            `:.`---.__         `-._
@@ -278,15 +283,40 @@ def sanitize_filename(name: str) -> str:
 
 def header_banner(tool_name: str):
     art = random.choice(ASCII_ARTS)
-    color_art = random.choice(COLORS)
-    color_tool = random.choice([c for c in COLORS if c != color_art])  
+    color1, color2 = random.sample(COLORS, 2)
+    color_status = STATUS
     
-    spaced_name = " ".join(tool_name.upper())
+    if color_status == 'BETA':
+      color_status = "red"
+    else:
+      color_status = "green"
     
-    max_width = max(len(line) for line in art.splitlines())
-    centered_name = spaced_name.center(max_width)
-    
-    banner_text = Text(f"\n{art}\n", style=color_art)
-    tool_text = Text(centered_name, style=f"bold {color_tool}")
-    
-    console.print(Panel.fit(banner_text + tool_text, border_style=color_art))
+    lines = art.strip("\n").split("\n")
+    for i, line in enumerate(lines):
+        ratio = i / max(1, len(lines) - 1)
+        color = f"rgb({int(0 + ratio*255)},{int(255 - ratio*200)},{int(200 - ratio*150)})"
+        console.print(f"[{color}]{line}[/]")
+
+    console.print()
+
+    # Stylish tool name (glow effect)
+    tool_display = f"⚡ {tool_name.upper()} ⚡"
+    border = "═" * (len(tool_display) + 6)
+
+    console.print(
+        f"[bold {color1}]{border}[/]\n"
+        f"[bold {color2}]   {tool_display}   [/]\n"
+        f"[bold {color1}]{border}[/]"
+    )
+
+    console.print()
+    panel_text = (
+        f"[bold {color2}]⚔️  DKrypt Pentesting Suite ⚔️[/]\n"
+        f"[white]Ver    :[/] [bold {color1}]{VERSION}[/][bold {color_status}] {STATUS}[/]\n"
+        f"[white]Author :[/] [bold {color1}]Rafacuy (arazz.)[/]\n"
+        f"[white]Github :[/] [underline {color2}]https://github.com/Rafacuy/DKrypt[/]"
+    )
+    console.rule(style=f"bold {color1}")
+    console.print(panel_text, justify="left")
+    console.rule(style=f"bold {color1}")
+
