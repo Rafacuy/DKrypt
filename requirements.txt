@@ -43,3 +43,5 @@ Appium-Python-Client
 webdriver-manager
 
 pyyaml
+
+python-nmap
