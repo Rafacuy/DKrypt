@@ -45,8 +45,7 @@ class MenuConfig:
         MenuOption(12, "Tracepulse", "Trace network routes and identify issues"),
         MenuOption(13, "JS Crawler", "Extract endpoints from JavaScript files"),
         MenuOption(14, "Python Obfuscator", "Obfuscate Python code for protection"),
-        MenuOption(15, "Interactive Shell", "Enter interactive command mode"),
-        MenuOption(16, "Exit", "Exit the application"),
+        MenuOption(15, "Exit", "Exit the application"),
     ]
     
     # Colors for styling
