@@ -1,21 +1,59 @@
 # core/banner.py
 from rich.console import Console
 from time import sleep
+from datetime import datetime
+from .menu import MenuConfig
+
+VERSION = MenuConfig().VERSION
+STATUS = MenuConfig().STATUS
+
+status_color = STATUS
+if status_color == "BETA": 
+    status_color = "red"
+else:
+    status_color = "green"    
 
 console = Console(highlight=False)
 
 def display_header():
         console.print(
-            """[red]
-    _____        _____                                 
- __|__   |__  __| __  |__  _____ __    _ _____    __   
-|     \     ||  |/ /     ||     |\ \  //|     | _|  |_ 
-|      \    ||     \     ||     \ \ \// |    _||_    _|
-|______/  __||__|\__\  __||__|\__\/__/  |___|    |__|  
-   |_____|      |_____|                                 
-
-Developed by Rafacuy (arazz.)
-            [/red]"""
+            f"""[red]                                                                                                   
+                                                                                                                                                
+                              ++++++++=   ====                                                                                                      
+                          +++++++++++++  ======                                                                                                     
+                       ****+++++++++       ==                                                                                                       
+                    *******+   +++++++++++======                                                                                                    
+                  *******  ++*+++++++++++++++=======                                                                                                
+                 *****  +******+++         ==+++======                                                                                              
+               *****+ ******+ +*+++++++++++++   ======                                                                                              
+              ***** ***** *********++++++++++++++                                                                                                   
+             **********+*******          +++++++++++                                                                                                
+             *** **** *****                   ++++++++                                                                                              
+        [white]    ************%#                       +++++[/red]                              
+           ***********%%#                                                         
+           *#*******%%##          ***                                          
+           ********%%###         ****+=                                             
+           ******#%%####      **#*#***+==       +**+*+                               
+           *****#%%######        *#******+    **********                               
+           *****%%######*       ********     ************                              
+            ***#%########*      ********    *************                                                                                           
+            **############*   *##*******  *#************                                                                                            
+             *##########**   ####** *#*# +####********#                                                                                             
+              ######**    ######## ####  ########***#%                                                                                              
+                       ##########*####  ###########%%                                                                                               
+                #%%%%%%%%%##### #####  #########%%%#                                                                                                
+                  %%%%%%%%##  ######  #%##%%%%%%%%                                                                                                  
+                      ##%%%%%%%%%%# %%%%%%%%%%%                                                                                                     
+                        %%%%%%%#  %%%%%%%%%%                                                                                                        
+                                ######                                                                                                                                                                                                                                                        
+            [/white]
+            
+            [bold red] W [/][bold white]E [/][bold red]L [/][bold white]C [/][bold red]O [/][bold white]M [/][bold red]E [/]
+            
+            [bold white]Author      : Rafacuy (arazz.)
+            [bold red]Time        : {datetime.now().strftime("%H:%M:%S")}
+            [bold white]Tool ver.   : [bright_yellow]{VERSION}[/] ([bold {status_color}]{STATUS}[/])
+            """
         )
     
 
