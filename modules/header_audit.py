@@ -359,8 +359,19 @@ class HeaderAuditor:
         console.print("4. Exit")
         return console.input("[bold cyan]Choose an option: [/bold cyan]").strip()
 
-    def run(self):
+    def run(self, args=None):
         """Main application loop."""
+        if args and args.command:
+            self.verbose = args.verbose
+            self.allow_private = args.allow_private
+            self.timeout = args.timeout
+
+            if args.command == 'single':
+                self.run_single_scan(args.url)
+            elif args.command == 'batch':
+                self.run_batch_scan(args.file, args.output, args.output_file)
+            return
+
         while True:
             clear_console()
             header_banner(tool_name="Header Auditor")
@@ -377,21 +388,22 @@ class HeaderAuditor:
                 console.print("[red]Invalid option. Please try again.[/red]")
                 time.sleep(1)
 
-    def run_single_scan(self):
+    def run_single_scan(self, url_input=None):
         """Handles the logic for scanning a single URL."""
-        console.print(Panel.fit("[bold]Single URL Scan[/bold]"))
-        
-        while True:
-            url_input = console.input('\nEnter target URL (e.g., http://example.com): ').strip()
-            if not urlparse(url_input).scheme:
-                url_input = 'http://' + url_input
+        if not url_input:
+            console.print(Panel.fit("[bold]Single URL Scan[/bold]"))
             
-            ok, reason, ip = is_url_valid(url_input, self.allow_private)
-            if ok:
-                if self.verbose and ip:
-                    console.print(f"[cyan]Resolved {urlparse(url_input).hostname} to {ip}[/cyan]")
-                break
-            console.print(f"[red]Error:[/red] {reason}")
+            while True:
+                url_input = console.input('\nEnter target URL (e.g., http://example.com): ').strip()
+                if not urlparse(url_input).scheme:
+                    url_input = 'http://' + url_input
+                
+                ok, reason, ip = is_url_valid(url_input, self.allow_private)
+                if ok:
+                    if self.verbose and ip:
+                        console.print(f"[cyan]Resolved {urlparse(url_input).hostname} to {ip}[/cyan]")
+                    break
+                console.print(f"[red]Error:[/red] {reason}")
 
         console.print(f"\n[cyan]Auditing headers for {url_input}...[/cyan]")
         redirect_chain, err = fetch_headers_with_retries(url_input, timeout=self.timeout, verbose=self.verbose)
@@ -422,16 +434,17 @@ class HeaderAuditor:
         self.display_summary(redirect_chain[-1]['url'], final_score, final_total_weight)
         console.input("\nPress Enter to return to the menu...")
 
-    def run_batch_scan(self):
+    def run_batch_scan(self, filepath=None, output_format=None, output_file=None):
         """Handles the logic for scanning multiple URLs from a file."""
-        clear_console()
-        console.print(Panel.fit("[bold]Batch URL Scan[/bold]"))
-        
-        while True:
-            filepath = console.input("Enter the path to the file containing URLs (one per line): ").strip()
-            if os.path.exists(filepath):
-                break
-            console.print(f"[red]File not found at '{filepath}'. Please try again.[/red]")
+        if not filepath:
+            clear_console()
+            console.print(Panel.fit("[bold]Batch URL Scan[/bold]"))
+            
+            while True:
+                filepath = console.input("Enter the path to the file containing URLs (one per line): ").strip()
+                if os.path.exists(filepath):
+                    break
+                console.print(f"[red]File not found at '{filepath}'. Please try again.[/red]")
 
         with open(filepath, 'r') as f:
             urls = [line.strip() for line in f if line.strip()]
@@ -469,12 +482,15 @@ class HeaderAuditor:
             return
 
         console.rule("Batch Scan Complete")
-        output_format = console.input("Export consolidated report? ([bold]c[/bold]sv / [bold]j[/bold]son / [bold]n[/bold]o): ").lower()
+        if not output_format:
+            output_format = console.input("Export consolidated report? ([bold]c[/bold]sv / [bold]j[/bold]son / [bold]n[/bold]o): ").lower()
+        
         if output_format in ('c', 'csv', 'j', 'json'):
             fmt = 'csv' if output_format.startswith('c') else 'json'
-            ts = datetime.now().strftime('%Y%m%d_%H%M%S')
-            filename = sanitize_filename(f"batch_report_{ts}.{fmt}")
-            export_batch_report(all_results, fmt, filename)
+            if not output_file:
+                ts = datetime.now().strftime('%Y%m%d_%H%M%S')
+                output_file = sanitize_filename(f"batch_report_{ts}.{fmt}")
+            export_batch_report(all_results, fmt, output_file)
         
         console.input("\nPress Enter to return to the menu...")
 
@@ -500,6 +516,4 @@ class HeaderAuditor:
         console.print(Panel(summary, title='[bold]Audit Summary[/bold]', expand=False, border_style="blue"))
 
 
-if __name__ == '__main__':
-    app = HeaderAuditor()
-    app.run()
+

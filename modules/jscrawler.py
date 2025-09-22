@@ -575,61 +575,66 @@ def display_results(results: Dict[str, Iterable], output_file: str) -> None:
 
 # --- CLI / main -----------------------------------------------------------
 
-def main() -> None:
+def main(args=None) -> None:
     clear_console()
     header_banner(tool_name="JS Crawler")
     display_disclaimer()
 
-    target_url = Prompt.ask("🎯 Target URL")
-    if not target_url.startswith(("http://", "https://")):
-        target_url = "https://" + target_url
-
-    # Selenium availability check
-    selenium_available, selenium_reason = check_selenium_availability()
-    use_selenium = False
-    if selenium_available and JSCrawlerConfig().allow_selenium:
-        use_selenium = Confirm.ask("🔄 Enable JS Rendering (Selenium)?", default=False)
+    if args:
+        target_url = args.url
+        use_selenium = args.selenium
+        output_file = args.output
+        output_format = args.format
+        respect_robots = not args.no_robots
     else:
-        if JSCrawlerConfig().allow_selenium:
-            console.print(f"[yellow]Selenium unavailable: {selenium_reason}; continuing without Selenium")
+        target_url = Prompt.ask("🎯 Target URL")
+        if not target_url.startswith(("http://", "https://")):
+            target_url = "https://" + target_url
 
-    # Output format prompt hint
-    parsed = urlparse(target_url)
-    domain_hint = parsed.netloc.replace(".", "_")
-    default_filename = f"{domain_hint}_findings.txt"
-    output_file = Prompt.ask("📁 Output file (use .json or .csv suffix for machine formats)", default=default_filename)
+        # Selenium availability check
+        selenium_available, selenium_reason = check_selenium_availability()
+        use_selenium = False
+        if selenium_available and JSCrawlerConfig().allow_selenium:
+            use_selenium = Confirm.ask("🔄 Enable JS Rendering (Selenium)?", default=False)
+        else:
+            if JSCrawlerConfig().allow_selenium:
+                console.print(f"[yellow]Selenium unavailable: {selenium_reason}; continuing without Selenium")
 
-    # Determine format from suffix if user provided
-    cfg = JSCrawlerConfig()
-    if output_file.lower().endswith(".json"):
-        cfg.output_format = "json"
-    elif output_file.lower().endswith(".csv"):
-        cfg.output_format = "csv"
-    else:
-        cfg.output_format = "text"
+        # Output format prompt hint
+        parsed = urlparse(target_url)
+        domain_hint = parsed.netloc.replace(".", "_")
+        default_filename = f"{domain_hint}_findings.txt"
+        output_file = Prompt.ask("📁 Output file (use .json or .csv suffix for machine formats)", default=default_filename)
+        output_format = "text"
+        if output_file.lower().endswith(".json"):
+            output_format = "json"
+        elif output_file.lower().endswith(".csv"):
+            output_format = "csv"
 
-    # Allow user to tweak some settings interactively (quick toggle)
-    if Confirm.ask("⚙️ Respect robots.txt?", default=cfg.respect_robots):
-        cfg.respect_robots = True
-    else:
-        cfg.respect_robots = False
+        # Allow user to tweak some settings interactively (quick toggle)
+        respect_robots = Confirm.ask("⚙️ Respect robots.txt?", default=True)
 
     # Build crawler
+    cfg = JSCrawlerConfig(
+        respect_robots=respect_robots,
+        output_format=output_format
+    )
     crawler = JSCrawler(config=cfg)
 
     try:
         results = crawler.crawl(target_url, use_selenium=use_selenium)
-        display_results(results, output_file)
-        saved = crawler.save_results(results, output_file, target_url)
-        if saved:
-            console.print(f"[green]Results saved to {output_file}")
+        if output_file:
+            display_results(results, output_file)
+            saved = crawler.save_results(results, output_file, target_url)
+            if saved:
+                console.print(f"[green]Results saved to {output_file}")
+            else:
+                console.print("[red]Failed to save results")
         else:
-            console.print("[red]Failed to save results")
+            display_results(results, "(not saved)")
+
     except KeyboardInterrupt:
         console.print("\n[yellow]Crawling interrupted by user.")
     except Exception as e:  # pragma: no cover - guard
         console.print(f"[red]Unexpected error during crawl: {e}")
 
-
-if __name__ == "__main__":
-    main()

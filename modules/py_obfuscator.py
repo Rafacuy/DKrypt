@@ -475,15 +475,28 @@ if __name__ == '__main__':
             print(f"\n{Fore.RED}[-] Obfuscation failed!{Style.RESET_ALL}")
 
 
-def main():
+def main(args=None):
     """Entry point"""
     if not COLORAMA_AVAILABLE:
         print("Notice: Install 'colorama' for enhanced display (pip install colorama)")
         print("Continuing without colors...\n")
     
     try:
-        obfuscator = PyObfuscator ()
-        obfuscator.run()
+        obfuscator = PyObfuscator()
+        if args:
+            obfuscator.input_file = args.input
+            obfuscator.output_file = args.output
+            if args.key:
+                obfuscator.encryption_key = obfuscator.derive_key(args.key.encode(), obfuscator.salt, obfuscator.iterations)
+            else:
+                obfuscator.encryption_key = os.urandom(32)
+            obfuscator.protection_level = args.level
+            if obfuscator.process_file():
+                obfuscator.display_results()
+            else:
+                print(f"\n{Fore.RED}[-] Obfuscation failed!{Style.RESET_ALL}")
+        else:
+            obfuscator.run()
     except KeyboardInterrupt:
         print(f"\n{Fore.YELLOW}[!] Operation cancelled by user{Style.RESET_ALL}")
         time.sleep(2)
@@ -492,7 +505,3 @@ def main():
         print(f"\n{Fore.RED}[!] Unexpected error: {e}{Style.RESET_ALL}")
         time.sleep(5)
         dkrypt_m()
-
-
-if __name__ == "__main__":
-    main()

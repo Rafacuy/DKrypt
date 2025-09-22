@@ -63,43 +63,11 @@ def run_tui():
 
         console.input("\n[dim]Press Enter to return to main menu...[/dim]")
 
-def run_cli(arg: str):
-    arg = arg.lower()
-    if arg == "sqli":
-        sqli_scan.run_sqli_scan()
-    elif arg == "xss":
-        asyncio.run(scanner.run_xss_scan())
-    elif arg == "portscanner":
-        asyncio.run(port_scanner.main_menu())
-    elif arg == "waftester":
-        app = tui.WAFTUI()
-        app.run()
-    elif arg == "subdomain":
-        subdomain.main_menu()
-    elif arg == "crawler":
-        asyncio.run(crawler_utils.main())
-    elif arg == "headers":
-        header_audit.HeaderAuditor().run()
-    elif arg == "dirbrute":
-        dir_bruteforcer.main()
-    elif arg == "sslinspect":
-        ssl_inspector.run_ssl_inspector()
-    elif arg == "corstest":
-        cors_scan.main()
-    elif arg == "smuggler":
-        main_runner.run()
-    elif arg == "tracepulse":
-        tracepulse.main()
-    elif arg == "js-crawler":
-        jscrawler.main()    
-    elif arg == "py-obfuscator":
-        py_obfuscator.main()    
-    else:
-        console.print(f"[red]Unknown module: {arg}[/red]")
+from core.cli import run_cli
 
 def main():
     if len(sys.argv) > 1:
-        run_cli(sys.argv[1])
+        run_cli()
     else:
         run_tui()
 

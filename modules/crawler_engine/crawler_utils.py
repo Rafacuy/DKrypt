@@ -314,9 +314,47 @@ async def main_menu():
                 break
 
 
-async def main():
+async def main(args=None):
     """Main application entry point."""
     shutdown_handler.setup_signal_handlers()
+    if args and args.command:
+        from .config_ui import CrawlConfig
+        config = CrawlConfig(
+            max_depth=args.depth,
+            max_concurrent=args.concurrency,
+            max_urls_per_crawl=args.max_urls,
+            use_javascript=args.js_render,
+            respect_robots=not args.no_robots,
+        )
+
+        urls_to_crawl = []
+        if args.command == 'single':
+            urls_to_crawl.append(args.url)
+        elif args.command == 'batch':
+            try:
+                with open(args.file, 'r', encoding='utf-8') as f:
+                    urls_to_crawl = [line.strip() for line in f if line.strip()]
+                if not urls_to_crawl:
+                    console.print("[yellow]File is empty or contains no valid URLs.[/yellow]")
+                    return
+            except FileNotFoundError:
+                console.print(f"[bold red]Error: File not found at '{args.file}'[/bold red]")
+                return
+
+        if urls_to_crawl:
+            header_factory = HeaderFactory()
+            async with WebCrawler(config, header_factory) as crawler:
+                shutdown_handler.register_crawler(crawler)
+                results = await crawler.crawl_urls(urls_to_crawl)
+
+                if results:
+                    if args.output and (args.file or args.output_file):
+                        filename = args.file if args.command == 'single' else args.output_file
+                        save_to_file(results, filename, args.output)
+                    else:
+                        display_results(results)
+        return
+
     try:
         # Display startup info and check system
         if not display_startup_info():
@@ -333,12 +371,3 @@ async def main():
     finally:
         # Ensure cleanup
         console.print("\n[dim]Cleaning up resources...[/dim]")
-
-
-if __name__ == "__main__":
-    try:
-        asyncio.run(main())
-    except KeyboardInterrupt:
-        console.print("\n[bold yellow]Program terminated.[/bold yellow]")
-    except Exception as e:
-        console.print(f"\n[bold red]Fatal error: {e}[/bold red]")

@@ -657,18 +657,43 @@ class TracePulse:
             self.console.print("\n[red]❌ An internal error occurred. Please check the logs for details.[/red]")
             sys.exit(1)
 
-def main():
+def main(cli_args=None):
     """Entry point with command line argument support"""
-    import argparse
-    
-    parser = argparse.ArgumentParser(description="TracePulse - Traceroute Tool")
-    parser.add_argument('--allow-private', action='store_true',
-                       help='Allow traceroute to private, loopback, and multicast addresses')
-    
-    args = parser.parse_args()
-    
-    tracer = TracePulse(allow_private=args.allow_private)
-    tracer.run()
+    if cli_args:
+        allow_private = cli_args.allow_private
+        config = {
+            'destination': cli_args.destination,
+            'protocol': cli_args.protocol,
+            'port': cli_args.port,
+            'max_hops': cli_args.max_hops,
+            'timeout': cli_args.timeout,
+            'probe_delay': cli_args.probe_delay,
+            'save_results': cli_args.save,
+            'filename': cli_args.output
+        }
+        is_valid, validated_ip, error_msg = SecurityValidator.validate_destination(
+            config['destination'], allow_private
+        )
+        if not is_valid:
+            console.print(f"[red]Error: {error_msg}[/red]")
+            return
+        config['resolved_ip'] = validated_ip
 
-if __name__ == "__main__":
-    main()
+        tracer = TracePulse(allow_private=allow_private)
+        tracer.config = config
+        results = tracer.run_traceroute()
+        tracer.display_summary(results)
+        if config['save_results']:
+            tracer.save_results_to_file(results, config['filename'])
+
+    else:
+        import argparse
+        
+        parser = argparse.ArgumentParser(description="TracePulse - Traceroute Tool")
+        parser.add_argument('--allow-private', action='store_true',
+                        help='Allow traceroute to private, loopback, and multicast addresses')
+        
+        args = parser.parse_args()
+        
+        tracer = TracePulse(allow_private=args.allow_private)
+        tracer.run()

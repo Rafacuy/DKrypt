@@ -625,15 +625,10 @@ def get_scan_parameters(is_batch=False):
     return (ports_str, scan_type, timing, service_detection, os_detection, 
             script_scan, custom_args, verbosity, output_format)
 
-async def run_single_scan():
+async def run_single_scan(target, ports_str, scan_type, timing, service_detection, os_detection, script_scan, custom_args, verbosity, output_format):
     """single target scanning with NMAP features."""
     CONSOLE.print(Panel("Single Target Scan", style="cyan", expand=False))
     try:
-        target = Prompt.ask("[bold green]Enter target host (e.g., scanme.nmap.org)[/bold green]")
-        
-        params = get_scan_parameters()
-        ports_str, scan_type, timing, service_detection, os_detection, script_scan, custom_args, verbosity, output_format = params
-
         scanner = NMAPPortScanner(verbosity=verbosity)
         ports = scanner.parse_ports(ports_str)
 
@@ -664,12 +659,10 @@ async def run_single_scan():
     except Exception as e:
         CONSOLE.print(f"\n[bold red]An unexpected error occurred: {e}[/bold red]")
 
-async def run_batch_scan():
+async def run_batch_scan(file_path, ports_str, scan_type, timing, service_detection, os_detection, script_scan, custom_args, verbosity, output_format):
     """batch scanning with NMAP features."""
     CONSOLE.print(Panel("Batch URL Scan", style="cyan", expand=False))
     try:
-        file_path = Prompt.ask("[bold green]Enter the path to the file with URLs (one per line)[/bold green]")
-        
         with open(file_path, 'r') as f:
             targets = [line.strip() for line in f if line.strip()]
 
@@ -677,9 +670,6 @@ async def run_batch_scan():
             CONSOLE.print("[bold red]File is empty or contains no valid URLs.[/bold red]")
             return
 
-        params = get_scan_parameters(is_batch=True)
-        ports_str, scan_type, timing, service_detection, os_detection, script_scan, custom_args, verbosity, output_format = params
-        
         scanner = NMAPPortScanner(verbosity=verbosity)
         ports = scanner.parse_ports(ports_str)
 
@@ -802,7 +792,14 @@ def display_scan_examples():
     CONSOLE.print(examples)
     Prompt.ask("\n[dim]Press Enter to continue...[/dim]")
 
-async def main_menu():
+async def main_menu(args=None):
+    if args and args.command:
+        if args.command == 'single':
+            await run_single_scan(args.target, args.ports, args.scan_type, args.timing, args.service_detection, args.os_detection, args.script_scan, args.custom_args, args.verbosity, args.output)
+        elif args.command == 'batch':
+            await run_batch_scan(args.file, args.ports, args.scan_type, args.timing, args.service_detection, args.os_detection, args.script_scan, args.custom_args, args.verbosity, args.output)
+        return
+
     """Enhanced main menu with NMAP integration options."""
     while True:
         clear_console()
@@ -842,10 +839,3 @@ async def main_menu():
         
         if choice in ['1', '2']:
             Prompt.ask("\n[dim]Press Enter to return to the menu...[/dim]")
-
-
-if __name__ == "__main__":
-    try:
-        asyncio.run(main_menu())
-    except KeyboardInterrupt:
-        CONSOLE.print("\n[bold yellow]Program interrupted by user. Exiting.[/bold yellow]")

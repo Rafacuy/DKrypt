@@ -34,8 +34,35 @@ class WAFTUI:
         self.selected_packs: List[str] = []
         self.custom_headers: List[Dict[str, str]] = []
     
-    def run(self):
+    def run(self, args=None):
         """Main application entry point"""
+        if args:
+            self.url = args.url
+            self.method = args.method
+            if args.packs:
+                self.selected_packs = [p.strip() for p in args.packs.split(",")]
+            if args.custom_headers:
+                try:
+                    self.custom_headers = json.loads(args.custom_headers)
+                except json.JSONDecodeError:
+                    console.print("[bold red]Error: Invalid JSON in --custom-headers[/bold red]")
+                    return
+            self.tester.config['max_concurrency'] = args.concurrency
+            self.tester.config['timeout'] = args.timeout
+            self.tester.config['jitter'] = args.jitter
+            self.tester.config['verify_tls'] = args.verify_tls
+
+            if args.profile:
+                self._load_profile(profile_name=args.profile)
+
+            if self.url:
+                asyncio.run(self._start_pipeline())
+                if args.export:
+                    self._export_results(self.tester.last_results, format=args.export)
+            else:
+                console.print("[bold red]Error: --url is required for CLI mode[/bold red]")
+            return
+
         try:
             self._main_loop()
         except KeyboardInterrupt:
@@ -291,31 +318,37 @@ class WAFTUI:
         console.print(f"[green]✅ Profile saved: {filepath}[/green]")
         time.sleep(1)
     
-    def _load_profile(self):
+    def _load_profile(self, profile_name=None):
         """Load configuration from profile"""
-        profiles = [f.replace('.json', '') for f in os.listdir(PROFILES_DIR) if f.endswith('.json')]
+        if not profile_name:
+            profiles = [f.replace('.json', '') for f in os.listdir(PROFILES_DIR) if f.endswith('.json')]
+            
+            if not profiles:
+                console.print("[yellow]⚠️ No profiles found[/yellow]")
+                time.sleep(1)
+                return
+            
+            profile_name = Prompt.ask("Select profile", choices=profiles)
         
-        if not profiles:
-            console.print("[yellow]⚠️ No profiles found[/yellow]")
-            time.sleep(1)
-            return
-        
-        profile_name = Prompt.ask("Select profile", choices=profiles)
         filepath = os.path.join(PROFILES_DIR, f"{profile_name}.json")
         
-        with open(filepath, 'r') as f:
-            profile_data = json.load(f)
-        
-        self.url = profile_data.get("url")
-        self.method = profile_data.get("method", "GET")
-        self.selected_packs = profile_data.get("selected_packs", [])
-        self.custom_headers = profile_data.get("custom_headers", [])
-        
-        if "config" in profile_data:
-            self.tester.config.update(profile_data["config"])
-        
-        console.print(f"[green]✅ Profile '{profile_name}' loaded[/green]")
-        time.sleep(1)
+        try:
+            with open(filepath, 'r') as f:
+                profile_data = json.load(f)
+            
+            self.url = profile_data.get("url")
+            self.method = profile_data.get("method", "GET")
+            self.selected_packs = profile_data.get("selected_packs", [])
+            self.custom_headers = profile_data.get("custom_headers", [])
+            
+            if "config" in profile_data:
+                self.tester.config.update(profile_data["config"])
+            
+            console.print(f"[green]✅ Profile '{profile_name}' loaded[/green]")
+            time.sleep(1)
+        except FileNotFoundError:
+            console.print(f"[bold red]Error: Profile '{profile_name}' not found.[/bold red]")
+            time.sleep(2)
     
     async def _start_pipeline(self):
         """Execute the complete testing pipeline"""
@@ -562,6 +595,4 @@ class WAFTUI:
         self._display_pipeline_results(self.tester.last_results)
 
 
-if __name__ == "__main__":
-    ui = WAFTUI()
-    ui.run()
+

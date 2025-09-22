@@ -1,7 +1,7 @@
 # modules/cors_scan.py
 
 """
-Enhanced CORS Misconfiguration Auditor Module
+CORS Misconfiguration Auditor Module
 """
 
 import requests
@@ -27,7 +27,7 @@ console = Console()
 
 class CORSAuditor:
     """
-    Enhanced CORS Auditor class with comprehensive testing and export capabilities.
+    CORS Auditor class withtesting and export capabilities.
     
     This class provides methods to systematically test various CORS attack vectors
     and provides detailed reporting with multiple export formats.
@@ -753,7 +753,7 @@ def handle_export_options(auditor: CORSAuditor):
         console.print(f"[bold red]Export failed: {str(e)}[/bold red]")
 
 
-def main():
+def main(args=None):
     """
     Main function that orchestrates the enhanced CORS auditing process.
     """
@@ -765,12 +765,17 @@ def main():
         clear_console()
         
         header_banner(tool_name="CORS Misconfig Scanner")
-        
-        # Get target URL from user
-        target_url = get_target_url()
-        if not target_url:
-            console.print("[bold red]Exiting...[/bold red]")
-            return
+
+        if args:
+            target_url = args.url
+            export_format = args.export
+            output_file = args.output
+        else:
+            # Get target URL from user
+            target_url = get_target_url()
+            if not target_url:
+                console.print("[bold red]Exiting...[/bold red]")
+                return
         
         # Initialize auditor and run tests
         auditor = CORSAuditor()
@@ -779,8 +784,17 @@ def main():
         # Display results
         auditor.display_results(target_url, findings)
         
-        # Handle export options
-        handle_export_options(auditor)
+        if args:
+            if export_format:
+                if export_format == 'json':
+                    auditor.export_to_json(output_file)
+                elif export_format == 'csv':
+                    auditor.export_to_csv(output_file)
+                elif export_format == 'txt':
+                    auditor.export_to_txt(output_file)
+        else:
+            # Handle export options
+            handle_export_options(auditor)
         
         console.print(f"\n[bold green]✓ Scan completed successfully![/bold green]")
         
@@ -790,7 +804,3 @@ def main():
     except Exception as e:
         console.print(f"\n[bold red]Unexpected error: {str(e)}[/bold red]")
         sys.exit(1)
-
-
-if __name__ == "__main__":
-    main()

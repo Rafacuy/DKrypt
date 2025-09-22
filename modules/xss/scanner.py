@@ -764,41 +764,23 @@ class XSSScanner:
 
 # ==================== Main Entry Point ====================
 
-async def run_xss_scan():
+async def run_xss_scan(url, threads, rate_limit, max_payloads, batch_size, smart_mode, stealth_mode, test_headers, verbose):
     clear_console()
     header_banner(tool_name="XSS Scanner")
     
-    url = console.input("\n[bold]Enter target URL: [/]").strip()
     if not url.startswith(('http://', 'https://')):
         url = 'https://' + url
     
-    console.print("\n[bold cyan]Scanner Configuration:[/bold cyan]")
-    config = {}
-    
-    # Enhanced configuration options
-    threads = console.input("Number of threads [20]: ").strip()
-    config['threads'] = int(threads) if threads else 20
-    
-    rate_limit = console.input("Rate limit (requests/second) [5]: ").strip()
-    config['rate_limit'] = int(rate_limit) if rate_limit else 5
-    
-    max_payloads = console.input("Max payloads per context [15]: ").strip()
-    config['max_payloads_per_context'] = int(max_payloads) if max_payloads else 15
-    
-    batch_size = console.input("Batch size [100]: ").strip()
-    config['batch_size'] = int(batch_size) if batch_size else 100
-    
-    smart = console.input("Enable smart mode? (y/n) [y]: ").strip().lower()
-    config['smart_mode'] = smart != 'n'
-    
-    stealth = console.input("Enable stealth mode? (y/n) [n]: ").strip().lower()
-    config['stealth_mode'] = stealth == 'y'
-    
-    test_headers = console.input("Test HTTP headers? (y/n) [y]: ").strip().lower()
-    config['test_headers'] = test_headers != 'n'
-    
-    verbose = console.input("Verbose output? (y/n) [y]: ").strip().lower()
-    config['verbose'] = verbose != 'n'
+    config = {
+        'threads': threads,
+        'rate_limit': rate_limit,
+        'max_payloads_per_context': max_payloads,
+        'batch_size': batch_size,
+        'smart_mode': smart_mode,
+        'stealth_mode': stealth_mode,
+        'test_headers': test_headers,
+        'verbose': verbose
+    }
     
     # Initialize scanner
     scanner = XSSScanner(url, config)

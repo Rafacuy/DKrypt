@@ -22,7 +22,7 @@
 
 
 <h1 align="center">Introduction</h1>
-DKrypt is an advanced, all-in-one penetration testing framework designed for security professionals, ethical hackers, and IT administrators. Built with modularity and efficiency at its core, DKrypt integrates cutting-edge reconnaissance, vulnerability scanning, and exploitation tools into a unified Text-based user interface (TUI). With its real-time visualization and intelligent automation, DKrypt transforms complex security assessments into streamlined workflows.
+DKrypt is an advanced, all-in-one penetration testing framework designed for security professionals, ethical hackers, and IT administrators. Built with modularity and efficiency at its core, DKrypt integrates cutting-edge reconnaissance, vulnerability scanning, and exploitation tools into a unified Text-based user interface (TUI) and a powerful Command Line Interface (CLI). With its real-time visualization and intelligent automation, DKrypt transforms complex security assessments into streamlined workflows.
 
 ## _Features_
 - **Directory Bruteforcer**: _Discover hidden directories on target web servers._
@@ -44,29 +44,40 @@ DKrypt is an advanced, all-in-one penetration testing framework designed for sec
 
 ## Installation
 
-1. **Clone the Repository**
-```bash
-git clone https://github.com/Rafacuy/DKrypt.git
-cd DKrypt
-```
+To get DKrypt up and running on your system, follow these steps:
 
-2. **Install Dependencies**
-```bash
-bash install.sh
-```
-Or install the `requirements.txt` directly:
-```bash
-pip install -r requirements.txt
-```
+### Prerequisites
+Ensure you have **Python 3.10+** and `git` installed on your system.
 
-3. **Run DKrypt**
-```bash
-python dkrypt.py
-```
+1.  **Clone the Repository**
+    Start by cloning the DKrypt repository to your local machine:
+    ```bash
+    git clone https://github.com/Rafacuy/DKrypt.git
+    cd DKrypt
+    ```
+
+2.  **Set Up Virtual Environment (Recommended)**
+    It's highly recommended to use a virtual environment to manage project dependencies and avoid conflicts with your system's Python packages.
+    ```bash
+    python -m venv venv
+    # Activate the virtual environment
+    # On Windows: .\venv\Scripts\activate
+    # On macOS/Linux: source venv/bin/activate
+    ```
+
+3.  **Install Dependencies**
+    Install all required Python packages using `pip`:
+    ```bash
+    pip install -r requirements.txt
+    ```
+    Alternatively, you can use the provided `install.sh` script (for Linux/macOS) which automates the dependency installation:
+    ```bash
+    bash install.sh
+    ```
 
 ### Trouble installing on Termux?
 
-If you're facing issues with `cryptography` or build tools, just run:
+If you're facing issues with `cryptography` or build tools on Termux, just run:
 ```bash
 bash FIX.sh # Only for termux users
 ```
@@ -74,26 +85,53 @@ This script will auto-install Termux dependencies for you.
 
 ---
 
+## Usage
+
+DKrypt offers two primary modes of operation: a Text-based User Interface (TUI) for beginners and a Command Line Interface (CLI) for advanced users and pipeline integration.
+
+### TUI Mode
+For an interactive, menu-driven experience, simply run DKrypt without any arguments:
+```bash
+python dkrypt.py
+```
+This will launch the TUI, allowing you to select and run modules through an easy-to-navigate menu.
+
+### CLI Mode
+For direct execution of modules with specific arguments, use the CLI mode. This is ideal for scripting and automation.
+```bash
+python dkrypt.py <module> [options]
+```
+For detailed instructions on how to use each module via the CLI, including all available options and examples, please refer to the comprehensive [CLI Guide](./CLI-guide.md).
+
+---
+
+## Documentation
+*   **CLI Guide**: A complete guide to using DKrypt's Command Line Interface, including module-specific options and examples.
+    *   [CLI-guide.md](./CLI-guide.md)
+*   **Contributor Guide**: Information for developers interested in contributing to DKrypt, covering setup, code structure, and contribution process.
+    *   [CONTRIBUTOR.md](./CONTRIBUTOR.md)
+
+---
+
 ## Requirements
-- Python 3.8+
+- Python 3.10+
 - `rich`, `requests`, `beautifulsoup4`, and other libraries listed in `requirements.txt`
 
 ## Wordlists
+DKrypt utilizes various wordlists for tasks like directory brute-forcing and subdomain enumeration.
 Custom wordlists for:
 
-* Directory brute-forcing
-
-* Subdomain enumeration
-
-* Admin panel discovery
-
-* Headers Pack
+*   Directory brute-forcing
+*   Subdomain enumeration
+*   Admin panel discovery
+*   Headers Pack
 
 _Located in /wordlists/_
 
 ## Contributing
-Pull requests are welcome! If you find bugs or want to suggest features, open an issue or fork the repo and submit a PR.
-Also you can chat me casualy on My [TikTok](https://tiktok.com/@rafardhancuy) account.
+We welcome contributions to DKrypt! If you're interested in improving the framework, please refer to our [Contributor Guide](./CONTRIBUTOR.md) for detailed instructions on how to set up your environment, code style, and the pull request process.
+
+If you find bugs or want to suggest features, please open an issue on the [GitHub Issues page](https://github.com/Rafacuy/DKrypt/issues).
 
 ## Author
 Copyright (C) 2025 Rafacuy (arazz.) 
@@ -108,5 +146,3 @@ Copyright (C) 2025 Rafacuy (arazz.)
 This tool is under the GPL-3.0 License. See the [LICENSE](./LICENSE) for details.
 
 ---
-
-

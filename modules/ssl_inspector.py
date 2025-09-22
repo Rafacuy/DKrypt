@@ -24,17 +24,9 @@ WEAK_ALGORITHMS = ['RC4', '3DES', 'MD5', 'CBC', 'EXPORT', 'NULL']
 INSECURE_PROTOCOLS = ['SSLv2', 'SSLv3', 'TLSv1.0', 'TLSv1.1']
 
 # --- Helper function to export results ---
-def export_results(results: Dict[str, Any], host: str):
+def export_results(results: Dict[str, Any], host: str, choice: str = None):
     """Asks the user if they want to export the results and saves them."""
-    while True:
-        choice = console.input("\n[bold]Export results? ([green]json[/green]/txt/no): [/]").strip().lower()
-        if not choice:
-            choice = 'json'  # Default to json
-        if choice in ['json', 'txt', 'no']:
-            break
-        console.print("[yellow]Invalid choice. Please enter 'json', 'txt', or 'no'.[/yellow]")
-
-    if choice == 'no':
+    if not choice or choice == 'no':
         return
 
     export_dir = "reports/ssl_results"
@@ -390,10 +382,192 @@ def check_security_features(host: str, port: int) -> Dict:
     return features
 
 
-def run_ssl_inspector():
+def run_ssl_inspector(args=None):
     """Main function to run the SSL/TLS inspection."""
     clear_console()
     header_banner(tool_name="SSL Inspector")
+
+    if args:
+        target = args.target
+        export_format = args.export
+        # Parse host and port
+        host, port_str = (target.split(':', 1) + ['443'])[:2]
+        try:
+            port = int(port_str)
+        except ValueError:
+            console.print(f"[red]Invalid port: {port_str}[/red]")
+            return
+        
+        # Resolve hostname
+        ip = resolve_host(host)
+        if not ip:
+            return
+
+        scan_results = {}
+        connection_success = False
+
+        # Attempt connection with retry logic
+        max_retries = 3
+        for attempt in range(max_retries):
+            try:
+                with console.status(f"[green]Connecting to {host}:{port} (Attempt {attempt + 1}/{max_retries})...[/]", spinner="bouncingBall"):
+                    context = ssl.create_default_context()
+                    with socket.create_connection((host, port), timeout=10) as sock:
+                        with context.wrap_socket(sock, server_hostname=host) as ssock:
+                            # Get certificate and cipher information
+                            cert_der = ssock.getpeercert(binary_form=True)
+                            cert = x509.load_der_x509_certificate(cert_der, default_backend())
+                            cipher_info = ssock.cipher()
+
+                console.print("[green]✔ Connection successful![/green]")
+
+                # Perform comprehensive security analysis
+                with console.status("[cyan]Analyzing security configuration...[/]", spinner="dots"):
+                    chain_details = check_certificate_chain(host, port)
+                    
+                    scan_results = {
+                        'host_info': {'host': host, 'ip': ip, 'port': port},
+                        'protocols': check_protocol_support(host, port),
+                        'cipher_analysis': analyze_cipher(cipher_info),
+                        'certificate_details': get_certificate_details(cert, chain_details['is_trusted']),
+                        'chain_details': chain_details,
+                        'security_features': check_security_features(host, port)
+                    }
+
+                    # Certificate validity information
+                    now = datetime.now(datetime.now().astimezone().tzinfo)
+                    scan_results['validity'] = {
+                        'not_valid_after': cert.not_valid_after_utc,
+                        'not_valid_before': cert.not_valid_before_utc,
+                        'days_remaining': (cert.not_valid_after_utc - now).days,
+                        'is_expired': now > cert.not_valid_after_utc,
+                        'is_not_yet_valid': now < cert.not_valid_before_utc
+                    }
+
+                    # Calculate security score
+                    grade, score = calculate_tls_score(scan_results)
+                    scan_results['tls_score'] = {'grade': grade, 'score': score}
+
+                connection_success = True
+                break
+
+            except socket.timeout:
+                console.print(f"[yellow]Connection timeout on attempt {attempt + 1}[/yellow]")
+                if attempt < max_retries - 1:
+                    time.sleep(1)
+            except Exception as e:
+                console.print(f"[red]Connection failed: {type(e).__name__} - {e}[/red]")
+                if attempt < max_retries - 1:
+                    time.sleep(1)
+                break
+
+        if not connection_success:
+            console.print("[bold red]❌ Failed to establish secure connection after all attempts.[/bold red]")
+            return
+
+        # Display comprehensive results
+        console.rule(f"[bold]Security Assessment for {host}:{port}[/bold]", style="#00a8ff")
+        
+        # Overall security grade
+        grade, score = scan_results['tls_score']['grade'], scan_results['tls_score']['score']
+        grade_colors = {"A+": "green", "A": "green", "B": "yellow", "C": "yellow", "D": "red", "F": "red"}
+        grade_color = grade_colors.get(grade, "red")
+        
+        console.print(Panel(
+            f"[{grade_color} bold]{grade}[/]\nScore: {score}/100",
+            title="[bold]Security Grade[/]",
+            style=grade_color,
+            width=25
+        ))
+
+        # Certificate information
+        cert_details = scan_results['certificate_details']
+        cert_info = (
+            f"[bold]Common Name:[/] {cert_details['common_name']}\n"
+            f"[bold]Issuer:[/] {cert_details['issuer'].get('organizationName', 'N/A')}\n"
+            f"[bold]Key Size:[/] {cert_details['key_size']} bits\n"
+            f"[bold]Signature:[/] {cert_details['sig_algorithm']}\n"
+        )
+        
+        if cert_details['sans']:
+            sans_display = ', '.join(cert_details['sans'][:3])
+            if len(cert_details['sans']) > 3:
+                sans_display += f" (+{len(cert_details['sans']) - 3} more)"
+            cert_info += f"[bold]SANs:[/] {sans_display}\n"
+        
+        if cert_details['is_self_signed']:
+            cert_info += "[bold red]⚠️ Self-Signed Certificate[/bold red]\n"
+
+        console.print(Panel(cert_info, title="[bold #00a8ff]Certificate Details[/]", expand=False))
+
+        # Security details table
+        security_table = Table(show_header=False, box=None, padding=(0, 1))
+        security_table.add_column(style="bold #00a8ff")
+        security_table.add_column()
+
+        # Certificate validity
+        validity = scan_results['validity']
+        if validity['is_expired']:
+            validity_text = "[bold red]❌ Certificate has expired![/bold red]"
+        elif validity['is_not_yet_valid']:
+            validity_text = f"[bold red]⚠️ Not yet valid until {validity['not_valid_before']:%Y-%m-%d}[/bold red]"
+        else:
+            days = validity['days_remaining']
+            if days > 30:
+                validity_text = f"[green]Expires in {days} days ({validity['not_valid_after']:%Y-%m-%d})[/green]"
+            elif days > 7:
+                validity_text = f"[yellow]Expires in {days} days ({validity['not_valid_after']:%Y-%m-%d})[/yellow]"
+            else:
+                validity_text = f"[red]Expires in {days} days ({validity['not_valid_after']:%Y-%m-%d})[/red]"
+        
+        security_table.add_row("Certificate Validity", validity_text)
+
+        # Protocol support
+        protocols = scan_results['protocols']
+        proto_list = []
+        for proto in ['TLSv1.3', 'TLSv1.2', 'TLSv1.1', 'TLSv1.0']:
+            if proto in protocols['supported']:
+                color = "green" if proto in ['TLSv1.3', 'TLSv1.2'] else "red"
+                proto_list.append(f"[{color}]{proto}[/{color}]")
+        
+        security_table.add_row("Supported Protocols", " ".join(proto_list) if proto_list else "[red]None detected[/red]")
+
+        # Cipher analysis
+        cipher = scan_results['cipher_analysis']
+        cipher_color = {"Strong": "green", "Moderate": "yellow", "Weak": "red"}[cipher['strength']]
+        cipher_text = f"[{cipher_color}]{cipher['name']}[/{cipher_color}]"
+        
+        cipher_features = []
+        if cipher['pfs']:
+            cipher_features.append("[green]PFS[/green]")
+        if cipher['aead']:
+            cipher_features.append("[green]AEAD[/green]")
+        
+        if cipher_features:
+            cipher_text += f" ({', '.join(cipher_features)})"
+        
+        security_table.add_row("Cipher Suite", cipher_text)
+
+        # Chain status
+        chain = scan_results['chain_details']
+        if chain['is_trusted'] and chain['is_chain_complete']:
+            chain_text = "[green]✔ Valid and trusted[/green]"
+        elif chain['is_chain_complete'] and not chain['is_trusted']:
+            chain_text = "[yellow]⚠️ Complete but untrusted[/yellow]"
+        else:
+            chain_text = "[red]❌ Incomplete or invalid[/red]"
+        
+        if chain['error']:
+            chain_text += f"\n[dim red]({chain['error']})[/dim red]"
+        
+        security_table.add_row("Certificate Chain", chain_text)
+
+        console.print(Panel(security_table, title="[bold #00a8ff]Security Analysis[/]", expand=False))
+
+        # Export option
+        if export_format:
+            export_results(scan_results, host, export_format)
+        return
     
     while True:
         target = console.input("\n[bold]➤ Enter target (e.g., google.com:443): [/]").strip()
@@ -582,6 +756,3 @@ def run_ssl_inspector():
             break
 
     console.print("\n[bold #00a8ff]Thank you for using SSL/TLS Security Inspector![/bold #00a8ff]")
-
-if __name__ == "__main__":
-    run_ssl_inspector()

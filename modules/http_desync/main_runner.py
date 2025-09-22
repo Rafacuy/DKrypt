@@ -42,7 +42,7 @@ def parse_headers(header_str: str) -> Dict[str, str]:
             headers[key.strip()] = val.strip()
     return headers
 
-def run():
+def run(args=None):
     """
     Main execution function with enhanced user interface and error handling.
     """
@@ -52,37 +52,42 @@ def run():
         clear_console()
         header_banner(tool_name="HTTP Desync")
 
-        # Target URL input with validation
-        while True:
-            target_url = Prompt.ask(
-                "[bold cyan]Enter target URL[/bold cyan]",
-                default="https://example.com"
-            ).strip()
+        if args:
+            target_url = args.url
+            port = args.port
+            headers = args.headers
+        else:
+            # Target URL input with validation
+            while True:
+                target_url = Prompt.ask(
+                    "[bold cyan]Enter target URL[/bold cyan]",
+                    default="https://example.com"
+                ).strip()
 
-            if not target_url:
-                console.print("[red]URL cannot be empty[/red]")
-                continue
+                if not target_url:
+                    console.print("[red]URL cannot be empty[/red]")
+                    continue
 
-            if not (target_url.startswith("http://") or target_url.startswith("https://")):
-                console.print("[red]URL must start with http:// or https://[/red]")
-                continue
+                if not (target_url.startswith("http://") or target_url.startswith("https://")):
+                    console.print("[red]URL must start with http:// or https://[/red]")
+                    continue
 
-            break
+                break
 
-        # Port input with smart defaults
-        default_port = 443 if target_url.startswith("https://") else 80
-        port = IntPrompt.ask(
-            "[bold cyan]Enter port[/bold cyan]",
-            default=default_port,
-            show_default=True
-        )
+            # Port input with smart defaults
+            default_port = 443 if target_url.startswith("https://") else 80
+            port = IntPrompt.ask(
+                "[bold cyan]Enter port[/bold cyan]",
+                default=default_port,
+                show_default=True
+            )
 
-        # Custom headers (optional)
-        headers = Prompt.ask(
-            "[bold cyan]Custom headers[/bold cyan] (optional, format: key1:val1,key2:val2)",
-            default="",
-            show_default=False
-        )
+            # Custom headers (optional)
+            headers = Prompt.ask(
+                "[bold cyan]Custom headers[/bold cyan] (optional, format: key1:val1,key2:val2)",
+                default="",
+                show_default=False
+            )
 
         # Advanced options
         console.print("\n[bold]Advanced Options:[/bold]")
@@ -101,25 +106,3 @@ def run():
     except Exception as e:
         console.print(f"\n[red]❌ Fatal error: {e}[/red]")
         sys.exit(1)
-
-# ============================================================================
-# ENTRY POINT
-# ============================================================================
-
-if __name__ == '__main__':
-    # Verify dependencies
-    required_modules = ['httpx', 'rich']
-    missing_modules = []
-
-    for module in required_modules:
-        try:
-            __import__(module)
-        except ImportError:
-            missing_modules.append(module)
-
-    if missing_modules:
-        print(f"Missing required modules: {', '.join(missing_modules)}")
-        print("Install them with: pip install " + " ".join(missing_modules))
-        sys.exit(1)
-
-    run()

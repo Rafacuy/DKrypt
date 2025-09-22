@@ -100,54 +100,62 @@ def run_concurrent_scan(base_url: str, wordlist: list, extensions: list, valid_c
                     progress.update(task, advance=1)
     return found
 
-def main():
+def main(args=None):
     """Main function to run the directory bruteforcer tool."""
     clear_console()
     init(autoreset=True) # Initialize colorama
     
     header_banner(tool_name="Dir Bruteforcer")
 
-    # --- Get Target URL ---
-    base_url = console.input("[bold yellow]Enter the target URL (e.g., https://example.com):[/bold yellow] ").strip()
-    if not base_url.startswith(('http://', 'https://')):
-        console.print("[bold red]Invalid URL. Please include http:// or https://[/bold red]")
-        sys.exit(1)
-
-    # --- Check Server Availability ---
-    try:
-        console.print(f"\n[cyan]Pinging server at {base_url}...[/cyan]")
-        r = requests.head(base_url, timeout=20, allow_redirects=True)
-        if not r.ok:
-            console.print(f"[bold red]Target server returned a non-OK status: {r.status_code}[/bold red]")
-            sys.exit(1)
-        console.print(f"[green]✓ Server is online (Status: {r.status_code}).[/green]")
-    except requests.RequestException as e:
-        console.print(f"[bold red]Failed to connect to the target server:[/bold red] {e}")
-        sys.exit(1)
-
-    # --- Configure Status Codes ---
-    default_codes = [200, 301, 302, 403, 401, 500]
-    console.print(f"\n[cyan]Default detection codes: {default_codes}[/cyan]")
-    add_custom = console.input("[bold yellow]Want to detect other status codes? (y/N):[/bold yellow] ").strip().lower()
-    if add_custom == 'y':
-        custom_codes_str = console.input("[bold yellow]Enter custom codes (comma-separated, e.g., 404,418):[/bold yellow] ").strip()
-        try:
-            custom_codes = [int(code.strip()) for code in custom_codes_str.split(',')]
-            default_codes.extend(custom_codes)
-            # Remove duplicates
-            valid_codes = sorted(list(set(default_codes)))
-            console.print(f"[green]✓ Now detecting: {valid_codes}[/green]")
-        except ValueError:
-            console.print("[bold red]Invalid input. Using default codes only.[/bold red]")
-            valid_codes = default_codes
+    if args:
+        base_url = args.url
+        wordlist_path = args.wordlist
+        extensions = [ext.strip() for ext in args.extensions.split(",")]
+        valid_codes = [int(code.strip()) for code in args.valid_codes.split(",")]
+        max_workers = args.max_workers
+        report_path = args.report
     else:
-        valid_codes = default_codes
+        # --- Get Target URL ---
+        base_url = console.input("[bold yellow]Enter the target URL (e.g., https://example.com):[/bold yellow] ").strip()
+        if not base_url.startswith(('http://', 'https://')):
+            console.print("[bold red]Invalid URL. Please include http:// or https://[/bold red]")
+            sys.exit(1)
 
-    # --- Tool Configuration ---
-    wordlist_path = os.path.join('wordlists', 'directory-brute.txt')
-    report_path = 'dir_reports.txt'
-    extensions = ['/', '.php', '.html', '.htm', '.asp', '.aspx', '.js', '.json', '.txt', '.bak', '.old', '.zip', '.tar.gz']
-    max_workers = 20 # Number of threads for concurrency
+        # --- Check Server Availability ---
+        try:
+            console.print(f"\n[cyan]Pinging server at {base_url}...[/cyan]")
+            r = requests.head(base_url, timeout=20, allow_redirects=True)
+            if not r.ok:
+                console.print(f"[bold red]Target server returned a non-OK status: {r.status_code}[/bold red]")
+                sys.exit(1)
+            console.print(f"[green]✓ Server is online (Status: {r.status_code}).[/green]")
+        except requests.RequestException as e:
+            console.print(f"[bold red]Failed to connect to the target server:[/bold red] {e}")
+            sys.exit(1)
+
+        # --- Configure Status Codes ---
+        default_codes = [200, 301, 302, 403, 401, 500]
+        console.print(f"\n[cyan]Default detection codes: {default_codes}[/cyan]")
+        add_custom = console.input("[bold yellow]Want to detect other status codes? (y/N):[/bold yellow] ").strip().lower()
+        if add_custom == 'y':
+            custom_codes_str = console.input("[bold yellow]Enter custom codes (comma-separated, e.g., 404,418):[/bold yellow] ").strip()
+            try:
+                custom_codes = [int(code.strip()) for code in custom_codes_str.split(',')]
+                default_codes.extend(custom_codes)
+                # Remove duplicates
+                valid_codes = sorted(list(set(default_codes)))
+                console.print(f"[green]✓ Now detecting: {valid_codes}[/green]")
+            except ValueError:
+                console.print("[bold red]Invalid input. Using default codes only.[/bold red]")
+                valid_codes = default_codes
+        else:
+            valid_codes = default_codes
+
+        # --- Tool Configuration ---
+        wordlist_path = os.path.join('wordlists', 'directory-brute.txt')
+        report_path = 'dir_reports.txt'
+        extensions = ['/', '.php', '.html', '.htm', '.asp', '.aspx', '.js', '.json', '.txt', '.bak', '.old', '.zip', '.tar.gz']
+        max_workers = 20 # Number of threads for concurrency
 
     # --- Run Scan ---
     words = load_wordlist(wordlist_path)
@@ -160,7 +168,3 @@ def main():
         save_report(found_urls, report_path)
     else:
         console.print("\n[bold yellow]Scan complete. No directories or files found.[/bold yellow]")
-
-if __name__ == "__main__":
-    run_bruteforce = main # Alias for clarity if needed elsewhere
-    run_bruteforce()

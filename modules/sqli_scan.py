@@ -552,22 +552,14 @@ class SQLiScanner:
         console.print(f"[green]Report exported to {filename}[/green]")
         return filename
 
-    def run_comprehensive_scan(self):
+    def run_comprehensive_scan(self, url, test_forms, test_headers, test_apis, export_format):
         """Main enhanced scanning function"""
         
         clear_console()
         header_banner(tool_name="SQLi Scanner")
         
-        # Get target URL
-        url = console.input("\n[bold]Enter target URL: [/]").strip()
         if not url.startswith(('http://', 'https://')):
             url = 'https://' + url
-        
-        # Configuration options
-        test_forms = Confirm.ask("Test POST forms?", default=True)
-        test_headers = Confirm.ask("Test header injection?", default=True) 
-        test_apis = Confirm.ask("Test API endpoints?", default=True)
-        export_format = Prompt.ask("Export format", choices=["html", "csv", "none"], default="html")
         
         headers = header_factory.get_headers()
         payloads = self.get_sqli_payloads()
@@ -808,12 +800,12 @@ class SQLiScanner:
             console.print(f"[bold red]Scan failed: {e}[/bold red]")
             console.print("[dim]Please check your internet connection and target URL.[/dim]")
 
-def run_sqli_scan():
+def run_sqli_scan(url, test_forms, test_headers, test_apis, export_format):
     """Entry point for the enhanced SQLi scanner"""
     scanner = SQLiScanner()
     
     try:
-        scanner.run_comprehensive_scan()
+        scanner.run_comprehensive_scan(url, test_forms, test_headers, test_apis, export_format)
     except KeyboardInterrupt:
         console.print("\n[yellow]Scan interrupted by user.[/yellow]")
         if scanner.vulnerabilities:
@@ -822,7 +814,4 @@ def run_sqli_scan():
                 target_domain = "interrupted_scan"
                 scanner.export_report(scanner.vulnerabilities, target_domain, "html")
     except Exception as e:
-        console.print(f"[bold red]Critical error: {e}[/bold red]")
-
-if __name__ == "__main__":
-    run_sqli_scan()
+        console.print(f"[bold red]Critical error: {e}[bold red]")

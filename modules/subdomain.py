@@ -220,10 +220,42 @@ def save_results(target, results, base_dir, duration):
         console.print(f"[red]  × Error saving file: {e}[/red]\n")
 
 
-def main_menu():
+def main_menu(args=None):
     """Displays the main menu and handles user choices."""
     scanner = DNSScanner()
     wordlist = None
+
+    if args and args.command:
+        scanner.rate_limiter = Semaphore(args.rate_limit)
+        if args.proxy_type and args.proxy_host:
+            if not scanner.configure_proxy(args.proxy_type, args.proxy_host, args.proxy_port):
+                return
+
+        wordlist = load_wordlist(path=args.wordlist)
+        if not wordlist:
+            console.print("[red]Wordlist could not be loaded.[/red]")
+            return
+
+        targets = []
+        if args.command == 'single':
+            if '.' in args.target:
+                targets.append(args.target)
+            else:
+                console.print("[red]Invalid domain format.[/red]")
+                return
+        elif args.command == 'batch':
+            try:
+                with open(args.file, 'r') as f:
+                    targets = [line.strip() for line in f if '.' in line.strip()]
+                if not targets:
+                    console.print("[red]No valid domains found in file.[/red]")
+                    return
+            except FileNotFoundError:
+                console.print(f"[red]Error: File not found at '{args.file}'[/red]")
+                return
+        
+        perform_scan(targets, scanner, wordlist)
+        return
 
     while True:
         clear_console()
@@ -291,13 +323,4 @@ def main_menu():
         
         perform_scan(targets, scanner, wordlist)
         Prompt.ask("\n[bold]Press Enter to return to the main menu...[/bold]")
-
-
-if __name__ == '__main__':
-    try:
-        main_menu()
-    except KeyboardInterrupt:
-        console.print("\n\n[bold red]Operation cancelled by user.[/bold red]")
-    except Exception as e:
-        console.print(f"\n[bold red]An unexpected error occurred: {e}[/bold red]")
 
