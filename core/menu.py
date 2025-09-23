@@ -26,7 +26,7 @@ class MenuConfig:
     
     # Application metadata
     APP_NAME = "DKrypt"
-    VERSION = "1.3.0"
+    VERSION = "1.4.0"
     STATUS = "STABLE"
     COPYRIGHT = "© 2025 DKrypt Security"
     
@@ -45,7 +45,7 @@ class MenuConfig:
         MenuOption(12, "Tracepulse", "Trace network routes and identify issues"),
         MenuOption(13, "JS Crawler", "Extract endpoints from JavaScript files"),
         MenuOption(14, "Python Obfuscator", "Obfuscate Python code for protection"),
-        MenuOption(15, "Exit", "Exit the application"),
+        MenuOption(0, "Exit", "Exit the application"),
     ]
     
     # Colors for styling
@@ -107,7 +107,7 @@ class MenuRenderer:
         
         # Add options to table
         for option in display_options:
-            if option.id == 15:  # Exit option
+            if option.id == 0:  # Exit option
                 table.add_row(
                     f"[{MenuConfig.COLORS['error']}]{option.id}[/]",
                     f"[{MenuConfig.COLORS['error']}]{option.name}[/]",
@@ -814,7 +814,7 @@ class MenuSystem:
             self.renderer.display_header()
             self.renderer.display_menu_table(MenuConfig.MENU_OPTIONS, self.sort_by_name)        
             self.console.print(f"\n[{MenuConfig.COLORS['muted']}]Commands: [/]"
-                             f"[{MenuConfig.COLORS['highlight']}]1-15[/] [dim]select tool[/] | "
+                             f"[{MenuConfig.COLORS['highlight']}]0-14[/] [dim]select tool[/] | "
                              f"[{MenuConfig.COLORS['highlight']}]sort[/] [dim]toggle sort[/] | "
                              f"[{MenuConfig.COLORS['highlight']}]shell[/] [dim]interactive mode[/] | "
                              f"[{MenuConfig.COLORS['highlight']}]exit/quit[/] [dim]exit app[/]")
@@ -875,7 +875,7 @@ class MenuSystem:
         """Display help information."""
         help_text = [
             "Available commands:",
-            "• 1-15    Select tool by number",
+            "• 0-14    Select tool by number",
             "• sort    Toggle sorting (ID/Name)",
             "• shell   Enter interactive command mode",
             "• exit    Exit application",
@@ -893,18 +893,12 @@ class MenuSystem:
     
     def handle_option_selection(self, option_id: int) -> None:
         """Handle option selection with clean feedback."""
-        if option_id == 16:  # Interactive mode
-            should_continue = self.interactive_prompt.run()
-            if should_continue:
-                input(f"\n[{MenuConfig.COLORS['muted']}]Press ENTER to continue...[/]")
-            return
-            
         option = self.get_option_by_id(option_id)
         if option:
             self.renderer.display_tool_selected(option)
             
             # Simulate tool loading
-            if option.id != 15:
+            if option.id != 0:
                 self.renderer.display_loading(f"Initializing {option.name}")
                 self.renderer.display_info("Tool would execute here")
         else:

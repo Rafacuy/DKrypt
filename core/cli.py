@@ -2,6 +2,7 @@
 import argparse
 import sys
 import asyncio
+import json
 from rich.console import Console
 
 from modules import (
@@ -9,7 +10,7 @@ from modules import (
     dir_bruteforcer, header_audit, port_scanner,
     cors_scan, sqli_scan, tracepulse, 
     jscrawler, py_obfuscator
-)
+)    
 from modules.crawler_engine import crawler_utils
 from modules.waf_bypass import tui
 from modules.http_desync import main_runner
@@ -96,7 +97,50 @@ def run_cli():
         app.run(args)
     elif args.module == "subdomain":
         header_banner(tool_name="Subdomain Scanner")
-        subdomain.main_menu(args)
+        
+        # Handle scan mode flags
+        if hasattr(args, 'api_only') and args.api_only:
+            args.scan_mode = 'api_only'
+        elif hasattr(args, 'bruteforce_only') and args.bruteforce_only:
+            args.scan_mode = 'bruteforce_only'  
+        else:
+            args.scan_mode = 'hybrid'  # Default hybrid mode
+        
+        # Set performance parameters
+        if not hasattr(args, 'rate_limit'):
+            args.rate_limit = 200
+        if not hasattr(args, 'dns_timeout'):
+            args.dns_timeout = 2
+        if not hasattr(args, 'dns_threads'):
+            args.dns_threads = 200
+            
+        # Parse API keys if provided
+        api_keys = {}
+        if hasattr(args, 'api_keys') and args.api_keys:
+            try:
+                api_keys = json.loads(args.api_keys)
+            except json.JSONDecodeError:
+                console.print("[red]Error: Invalid JSON format for API keys[/red]")
+                return
+        args.api_keys = api_keys
+        
+        # Parse output formats
+        if hasattr(args, 'output_formats') and args.output_formats:
+            output_formats = [fmt.strip().lower() for fmt in args.output_formats.split(',')]
+            valid_formats = ['json', 'csv', 'txt']
+            output_formats = [fmt for fmt in output_formats if fmt in valid_formats]
+            if not output_formats:
+                output_formats = ['json', 'csv', 'txt'] 
+        else:
+            output_formats = ['json', 'csv', 'txt']
+        args.output_formats = output_formats
+        
+        # Validate proxy configuration
+        if hasattr(args, 'proxy_type') and args.proxy_type and not hasattr(args, 'proxy_host'):
+            console.print("[red]Error: --proxy-host is required when --proxy-type is specified[/red]")
+            return
+        
+        asyncio.run(subdomain.main_menu(args))
     elif args.module == "crawler":
         header_banner(tool_name="Website Crawler")
         asyncio.run(crawler_utils.main(args))
@@ -123,7 +167,7 @@ def run_cli():
         jscrawler.main(args)
     elif args.module == "py-obfuscator":
         header_banner("Py Obfuscator")
-        py_obfuscator.main(args)
+        py_obfuscator.main(args)   
     else:
         console.print(f"[red]Unknown module: {args.module}[/red]")
 
@@ -409,7 +453,7 @@ def add_waftester_parser(subparsers):
 def add_subdomain_parser(subparsers):
     parser = subparsers.add_parser(
         "subdomain", 
-        help="Subdomain Enumeration: Discovers subdomains for a given target domain."
+        help="Subdomain Enumeration: Advanced subdomain discovery with multiple scan modes and performance optimization."
     )
     subdomain_subparsers = parser.add_subparsers(
         dest="command", 
@@ -419,71 +463,160 @@ def add_subdomain_parser(subparsers):
     # Single scan parser
     single_parser = subdomain_subparsers.add_parser(
         "single", 
-        help="Enumerate subdomains for a single target domain."
+        help="Enumerate subdomains for a single target domain using various scan modes."
     )
     single_parser.add_argument(
         "--target", 
         help="Target domain to enumerate subdomains for (e.g., example.com)", 
         required=True
     )
+    
+    # Scan mode flags (mutually exclusive)
+    mode_group = single_parser.add_mutually_exclusive_group()
+    mode_group.add_argument(
+        "--api-only", 
+        help="Use only API sources for enumeration (fast, stealthy, less noisy)", 
+        action="store_true"
+    )
+    mode_group.add_argument(
+        "--bruteforce-only", 
+        help="Use only wordlist bruteforce for enumeration (thorough, comprehensive)", 
+        action="store_true"
+    )
+    
+    # Performance settings
     single_parser.add_argument(
         "--rate-limit", 
-        help="Maximum number of concurrent requests to send. Default: 50.", 
+        help="Number of concurrent DNS queries (recommended: 100-500 for large wordlists). Default: 200.", 
         type=int, 
-        default=50
+        default=200
     )
     single_parser.add_argument(
+        "--dns-timeout", 
+        help="DNS timeout in seconds (lower = faster, higher = more reliable). Default: 2.", 
+        type=int, 
+        default=2
+    )
+    single_parser.add_argument(
+        "--dns-threads", 
+        help="DNS thread pool size for concurrent processing. Default: 200.", 
+        type=int, 
+        default=200
+    )
+    
+    # API configuration
+    single_parser.add_argument(
+        "--api-keys", 
+        help="JSON string of API keys for premium sources (e.g., '{\"virustotal\": \"your_api_key\"}'). Enables additional API sources.", 
+        type=str
+    )
+    
+    # Proxy configuration
+    single_parser.add_argument(
         "--proxy-type", 
-        help="Type of proxy to use (socks4, socks5, or http)."
+        help="Type of proxy to use for DNS resolution. Requires PySocks library.", 
+        choices=["socks4", "socks5", "http"]
     )
     single_parser.add_argument(
         "--proxy-host", 
-        help="Proxy host address."
+        help="Proxy host address (e.g., 127.0.0.1, proxy.example.com). Required if --proxy-type is specified."
     )
     single_parser.add_argument(
         "--proxy-port", 
-        help="Proxy port number.", 
+        help="Proxy port number. If not specified, uses default ports (1080 for SOCKS, 8080 for HTTP).", 
         type=int
     )
+    
     single_parser.add_argument(
         "--wordlist", 
-        help="Path to a custom wordlist file for subdomain brute-forcing. Default: wordlists/subdomain.txt.", 
+        help="Path to custom wordlist file for subdomain brute-forcing. Default: wordlists/subdomain.txt.", 
         default="wordlists/subdomain.txt"
+    )
+    
+    # Output configuration
+    single_parser.add_argument(
+        "--output-formats", 
+        help="Comma-separated list of output formats to generate. Options: json,csv,txt. Default: json,csv,txt.", 
+        default="json,csv,txt"
     )
 
     # Batch scan parser
     batch_parser = subdomain_subparsers.add_parser(
         "batch", 
-        help="Enumerate subdomains for multiple targets listed in a file."
+        help="Enumerate subdomains for multiple targets listed in a file using various scan modes."
     )
     batch_parser.add_argument(
         "--file", 
-        help="Path to a file containing target domains, one per line.", 
+        help="Path to file containing target domains, one per line.", 
         required=True
     )
+    
+    batch_mode_group = batch_parser.add_mutually_exclusive_group()
+    batch_mode_group.add_argument(
+        "--api-only", 
+        help="Use only API sources for enumeration (fast, stealthy, less noisy)", 
+        action="store_true"
+    )
+    batch_mode_group.add_argument(
+        "--bruteforce-only", 
+        help="Use only wordlist bruteforce for enumeration (thorough, comprehensive)", 
+        action="store_true"
+    )
+    
+    # Performance settings
     batch_parser.add_argument(
         "--rate-limit", 
-        help="Maximum number of concurrent requests to send. Default: 50.", 
+        help="Number of concurrent DNS queries (recommended: 100-500 for large wordlists). Default: 200.", 
         type=int, 
-        default=50
+        default=200
     )
     batch_parser.add_argument(
+        "--dns-timeout", 
+        help="DNS timeout in seconds (lower = faster, higher = more reliable). Default: 2.", 
+        type=int, 
+        default=2
+    )
+    batch_parser.add_argument(
+        "--dns-threads", 
+        help="DNS thread pool size for concurrent processing. Default: 200.", 
+        type=int, 
+        default=200
+    )
+    
+    # API configuration
+    batch_parser.add_argument(
+        "--api-keys", 
+        help="JSON string of API keys for premium sources (e.g., '{\"virustotal\": \"your_api_key\"}'). Enables additional API sources.", 
+        type=str
+    )
+    
+    # Proxy configuration
+    batch_parser.add_argument(
         "--proxy-type", 
-        help="Type of proxy to use (socks4, socks5, or http)."
+        help="Type of proxy to use for DNS resolution. Requires PySocks library.", 
+        choices=["socks4", "socks5", "http"]
     )
     batch_parser.add_argument(
         "--proxy-host", 
-        help="Proxy host address."
+        help="Proxy host address (e.g., 127.0.0.1, proxy.example.com). Required if --proxy-type is specified."
     )
     batch_parser.add_argument(
         "--proxy-port", 
-        help="Proxy port number.", 
+        help="Proxy port number. If not specified, uses default ports (1080 for SOCKS, 8080 for HTTP).", 
         type=int
     )
+    
+    # Wordlist configuration 
     batch_parser.add_argument(
         "--wordlist", 
-        help="Path to a custom wordlist file for subdomain brute-forcing. Default: wordlists/subdomain.txt.", 
+        help="Path to custom wordlist file for subdomain brute-forcing. Default: wordlists/subdomain.txt.", 
         default="wordlists/subdomain.txt"
+    )
+    
+    batch_parser.add_argument(
+        "--output-formats", 
+        help="Comma-separated list of output formats to generate. Options: json,csv,txt. Default: json,csv,txt.", 
+        default="json,csv,txt"
     )
 
 def add_crawler_parser(subparsers):
@@ -865,3 +998,4 @@ def add_pyobfuscator_parser(subparsers):
         default=2, 
         choices=[1, 2, 3]
     )
+    

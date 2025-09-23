@@ -54,8 +54,8 @@ def run_tui():
         elif choice == 13:
             jscrawler.main()    
         elif choice == 14:
-            py_obfuscator.main()
-        elif choice == 15:
+            py_obfuscator.main() 
+        elif choice == 0:
             console.print("[bold red]\n  Exiting... \n[/bold red]")
             sys.exit(0)
         else:

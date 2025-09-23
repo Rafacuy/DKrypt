@@ -203,7 +203,7 @@ python dkrypt.py waftester --url https://example.com/admin --method POST --packs
 
 ### Subdomain Enumeration (`subdomain`)
 
-Discovers subdomains for a given target domain.
+subdomain discovery tool with multiple scan modes and performance optimizations for large-scale enumeration.
 
 **Usage:**
 ```bash
@@ -219,18 +219,37 @@ python dkrypt.py subdomain <command> [options]
 python dkrypt.py subdomain single --target <domain> [options]
 ```
 
-| Option         | Type    | Default                  | Description                                                                                             | Required |
-| :------------- | :------ | :----------------------- | :------------------------------------------------------------------------------------------------------ | :------- |
-| `--target`     | string  |                          | Target domain to enumerate subdomains for (e.g., `example.com`)                                         | Yes      |
-| `--rate-limit` | integer | `50`                     | Maximum number of concurrent requests to send.                                                          | No       |
-| `--proxy-type` | string  |                          | Type of proxy to use (socks4, socks5, or http).                                                         | No       |
-| `--proxy-host` | string  |                          | Proxy host address.                                                                                     | No       |
-| `--proxy-port` | integer |                          | Proxy port number.                                                                                      | No       |
-| `--wordlist`   | string  | `wordlists/subdomain.txt` | Path to a custom wordlist file for subdomain brute-forcing.                                             | No       |
+| Option              | Type    | Default                 | Description                                                                              | Required |
+|---------------------|---------|-------------------------|------------------------------------------------------------------------------------------|----------|
+| `--target`          | string  | None                    | Target domain to enumerate subdomains for                                                | Yes      |
+| `--api-only`        | flag    | False                   | Use only API sources for enumeration (fast, stealthy, less noisy)                        | No       |
+| `--bruteforce-only` | flag    | False                   | Use only wordlist bruteforce for enumeration (thorough, comprehensive)                   | No       |
+| `--rate-limit`      | integer | 200                     | Number of concurrent DNS queries (recommended: 100-500 for large wordlists)              | No       |
+| `--dns-timeout`     | integer | 2                       | DNS timeout in seconds (lower = faster, higher = more reliable)                          | No       |
+| `--dns-threads`     | integer | 200                     | DNS thread pool size for concurrent processing                                           | No       |
+| `--api-keys`        | string  | None                    | JSON string of API keys for premium sources (e.g., '{"virustotal": "your_api_key"}')    | No       |
+| `--proxy-type`      | string  | None                    | Type of proxy to use for DNS resolution (socks4, socks5, http)                          | No       |
+| `--proxy-host`      | string  | None                    | Proxy host address (required if --proxy-type is specified)                              | No       |
+| `--proxy-port`      | integer | None                    | Proxy port number (uses defaults: 1080 for SOCKS, 8080 for HTTP)                       | No       |
+| `--wordlist`        | string  | wordlists/subdomain.txt | Path to custom wordlist file for subdomain brute-forcing                                | No       |
+| `--output-formats`  | string  | json,csv,txt            | Comma-separated list of output formats to generate                                       | No       |
 
-**Example:**
+**Examples:**
 ```bash
-python dkrypt.py subdomain single --target example.com --rate-limit 100 --wordlist custom_subs.txt
+# Fast API-only enumeration (recommended for quick reconnaissance)
+python dkrypt.py subdomain single --target example.com --api-only
+
+# High-performance bruteforce with large wordlist  
+python dkrypt.py subdomain single --target example.com --bruteforce-only --rate-limit 400 --dns-timeout 1
+
+# Comprehensive hybrid scan with custom wordlist
+python dkrypt.py subdomain single --target example.com --wordlist custom.txt --rate-limit 300
+
+# Stealth mode with proxy
+python dkrypt.py subdomain single --target example.com --proxy-type socks5 --proxy-host 127.0.0.1 --proxy-port 9050
+
+# API enumeration with premium keys
+python dkrypt.py subdomain single --target example.com --api-only --api-keys '{"virustotal": "your_key"}'
 ```
 
 #### `batch` - Enumerate subdomains for multiple targets listed in a file.
@@ -240,19 +259,36 @@ python dkrypt.py subdomain single --target example.com --rate-limit 100 --wordli
 python dkrypt.py subdomain batch --file <path_to_file> [options]
 ```
 
-| Option         | Type    | Default                  | Description                                                                                             | Required |
-| :------------- | :------ | :----------------------- | :------------------------------------------------------------------------------------------------------ | :------- |
-| `--file`       | string  |                          | Path to a file containing target domains, one per line.                                                 | Yes      |
-| `--rate-limit` | integer | `50`                     | Maximum number of concurrent requests to send.                                                          | No       |
-| `--proxy-type` | string  |                          | Type of proxy to use (socks4, socks5, or http).                                                         | No       |
-| `--proxy-host` | string  |                          | Proxy host address.                                                                                     | No       |
-| `--proxy-port` | integer |                          | Proxy port number.                                                                                      | No       |
-| `--wordlist`   | string  | `wordlists/subdomain.txt` | Path to a custom wordlist file for subdomain brute-forcing.                                             | No       |
+| Option              | Type    | Default                 | Description                                                                              | Required |
+|---------------------|---------|-------------------------|------------------------------------------------------------------------------------------|----------|
+| `--file`            | string  | None                    | Path to file containing target domains, one per line                                     | Yes      |
+| `--api-only`        | flag    | False                   | Use only API sources for enumeration (fast, stealthy, less noisy)                        | No       |
+| `--bruteforce-only` | flag    | False                   | Use only wordlist bruteforce for enumeration (thorough, comprehensive)                   | No       |
+| `--rate-limit`      | integer | 200                     | Number of concurrent DNS queries (recommended: 100-500 for large wordlists)              | No       |
+| `--dns-timeout`     | integer | 2                       | DNS timeout in seconds (lower = faster, higher = more reliable)                          | No       |
+| `--dns-threads`     | integer | 200                     | DNS thread pool size for concurrent processing                                           | No       |
+| `--api-keys`        | string  | None                    | JSON string of API keys for premium sources (e.g., '{"virustotal": "your_api_key"}')    | No       |
+| `--proxy-type`      | string  | None                    | Type of proxy to use for DNS resolution (socks4, socks5, http)                          | No       |
+| `--proxy-host`      | string  | None                    | Proxy host address (required if --proxy-type is specified)                              | No       |
+| `--proxy-port`      | integer | None                    | Proxy port number (uses defaults: 1080 for SOCKS, 8080 for HTTP)                       | No       |
+| `--wordlist`        | string  | wordlists/subdomain.txt | Path to custom wordlist file for subdomain brute-forcing                                | No       |
+| `--output-formats`  | string  | json,csv,txt            | Comma-separated list of output formats to generate                                       | No       |
 
-**Example:**
+**Examples:**
 ```bash
-python dkrypt.py subdomain batch --file domains.txt --proxy-type http --proxy-host 127.0.0.1 --proxy-port 8080
+# Fast API-only batch scan
+python dkrypt.py subdomain batch --file domains.txt --api-only --output-formats json,csv
+
+# High-performance batch bruteforce  
+python dkrypt.py subdomain batch --file domains.txt --bruteforce-only --rate-limit 500 --dns-threads 300
+
+# Comprehensive batch scan with all modes
+python dkrypt.py subdomain batch --file domains.txt --rate-limit 300 --output-formats json,csv,txt
+
+# Batch scan with proxy for anonymity
+python dkrypt.py subdomain batch --file domains.txt --proxy-type socks5 --proxy-host 127.0.0.1
 ```
+
 
 ### Web Crawler (`crawler`)
 
