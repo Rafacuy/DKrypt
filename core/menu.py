@@ -45,6 +45,7 @@ class MenuConfig:
         MenuOption(12, "Tracepulse", "Trace network routes and identify issues"),
         MenuOption(13, "JS Crawler", "Extract endpoints from JavaScript files"),
         MenuOption(14, "Python Obfuscator", "Obfuscate Python code for protection"),
+        MenuOption(15, "GraphQL Introspector", "Introspect queries from GraphQL endpoints"),
         MenuOption(0, "Exit", "Exit the application"),
     ]
     
@@ -68,7 +69,7 @@ class MenuValidator:
     def validate_choice(choice: str, max_options: int) -> Tuple[bool, Union[int, str]]:
         """Validate user menu choice."""
         if not choice or not choice.strip():
-            return False, f"Enter a number between 1-{max_options}"
+            return False, f"Enter a number between 0-{max_options}"
         
         choice = choice.strip()
         
@@ -76,8 +77,8 @@ class MenuValidator:
             return False, f"Invalid input. Enter 1-{max_options}"
         
         choice_int = int(choice)
-        if not 1 <= choice_int <= max_options:
-            return False, f"Option {choice_int} out of range (1-{max_options})"
+        if not 0 <= choice_int <= max_options:
+            return False, f"Option {choice_int} out of range (0-{max_options})"
         
         return True, choice_int
 
@@ -875,7 +876,7 @@ class MenuSystem:
         """Display help information."""
         help_text = [
             "Available commands:",
-            "• 0-14    Select tool by number",
+            "• 0-15    Select tool by number",
             "• sort    Toggle sorting (ID/Name)",
             "• shell   Enter interactive command mode",
             "• exit    Exit application",

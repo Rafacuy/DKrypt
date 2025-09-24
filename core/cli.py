@@ -9,7 +9,7 @@ from modules import (
     subdomain, ssl_inspector,
     dir_bruteforcer, header_audit, port_scanner,
     cors_scan, sqli_scan, tracepulse, 
-    jscrawler, py_obfuscator
+    jscrawler, py_obfuscator, graphql_introspect
 )    
 from modules.crawler_engine import crawler_utils
 from modules.waf_bypass import tui
@@ -52,12 +52,14 @@ def create_parser():
         tracepulse    - Network Traceroute Utility
         js-crawler    - JavaScript File Crawler and Endpoint Extractor
         py-obfuscator - Python Code Obfuscator
+        graphql       - GraphQL Introspection and Vulnerability Scanner
         """
     )
 
     # Add subparsers for each module
     add_sqli_parser(subparsers)
     add_xss_parser(subparsers)
+    add_graphql_parser(subparsers)
     add_portscanner_parser(subparsers)
     add_waftester_parser(subparsers)
     add_subdomain_parser(subparsers)
@@ -147,6 +149,9 @@ def run_cli():
     elif args.module == "headers":
         header_banner(tool_name="Headers Audit")
         header_audit.HeaderAuditor().run(args)
+    elif args.module == "graphql":
+        header_banner(tool_name="GraphQL Introspection")
+        graphql_introspect.run_cli(args)    
     elif args.module == "dirbrute":
         header_banner(tool_name="Dirbruteforcer")
         dir_bruteforcer.main(args)
@@ -255,6 +260,64 @@ def add_xss_parser(subparsers):
     parser.add_argument(
         "--verbose", 
         help="Enable verbose output to display detailed information during the scan.", 
+        action="store_true"
+    )
+    
+def add_graphql_parser(subparsers):
+    parser = subparsers.add_parser(
+        "graphql", 
+        help="GraphQL endpoint analysis and vulnerability detection"
+    )
+    parser.add_argument(
+        "--url", 
+        help="GraphQL endpoint URL to introspect (e.g., https://example.com/graphql)", 
+        required=True
+    )
+    parser.add_argument(
+        "--headers", 
+        help="Custom headers as JSON string (e.g., '{\"Authorization\": \"Bearer token\", \"X-API-Key\": \"key123\"}')", 
+        default="{}"
+    )
+    parser.add_argument(
+        "--timeout", 
+        help="Request timeout in seconds. Higher values recommended for slow endpoints. Default: 30.", 
+        type=int, 
+        default=30
+    )
+    parser.add_argument(
+        "--export", 
+        help="Export formats (comma-separated): json,csv,txt. Default exports all formats for comprehensive analysis.", 
+        default="json,csv,txt"
+    )
+    parser.add_argument(
+        "--output", 
+        help="Output filename prefix for exported results. If not specified, auto-generates based on target and timestamp."
+    )
+    parser.add_argument(
+        "--verbose", 
+        help="Display detailed results in console including all queries, mutations, and analysis details.", 
+        action="store_true"
+    )
+    parser.add_argument(
+        "--export-raw", 
+        help="Export raw GraphQL response even on failure for manual analysis and debugging.", 
+        action="store_true"
+    )
+    
+    # HeaderFactory integration arguments
+    parser.add_argument(
+        "--no-header-factory", 
+        help="Disable HeaderFactory and use basic static headers instead of realistic rotating headers.", 
+        action="store_true"
+    )
+    parser.add_argument(
+        "--header-pool-size", 
+        help="Size of HeaderFactory pool for generating realistic browser headers. Larger pools provide more variety but use more memory. Default: uses config settings.", 
+        type=int
+    )
+    parser.add_argument(
+        "--rotate-headers", 
+        help="Enable header rotation during requests to mimic different browser sessions and avoid detection.", 
         action="store_true"
     )
 

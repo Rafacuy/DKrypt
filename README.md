@@ -39,6 +39,7 @@ DKrypt is an advanced, all-in-one penetration testing framework designed for sec
 - **XSS Scanner**: _Scan for XSS vulnerability within website._
 - **Python Obfuscator**: _Protect a python file and make it unreadable._
 - **Tracepulse**: _Trace the route and identify a network problems._
+- **GraphQL introspection**: _GraphQL introspection and vulnerabilities scanning._
 
 ---
 

@@ -10,7 +10,7 @@ from modules import (
     subdomain, ssl_inspector,
     dir_bruteforcer, header_audit, port_scanner,
     cors_scan, sqli_scan, tracepulse, 
-    jscrawler, py_obfuscator
+    jscrawler, py_obfuscator, graphql_introspect
 )
 from modules.crawler_engine import crawler_utils
 from modules.waf_bypass import tui
@@ -55,6 +55,8 @@ def run_tui():
             jscrawler.main()    
         elif choice == 14:
             py_obfuscator.main() 
+        elif choice == 15:
+            graphql_introspect.run_tui()  
         elif choice == 0:
             console.print("[bold red]\n  Exiting... \n[/bold red]")
             sys.exit(0)

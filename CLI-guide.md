@@ -29,6 +29,7 @@ DKrypt offers a Command Line Interface (CLI) for automating penetration testing 
     - [Tracepulse (`tracepulse`)](#tracepulse-tracepulse)
     - [JS Crawler \& Endpoint Extractor (`js-crawler`)](#js-crawler--endpoint-extractor-js-crawler)
     - [Python Obfuscator (`py-obfuscator`)](#python-obfuscator-py-obfuscator)
+    - [GraphQL Introspection \& Vulnerability Scanner (`graphql`)](#graphql-introspection--vulnerability-scanner-graphql)
   - [3. Output and Reporting](#3-output-and-reporting)
 
 ---
@@ -548,6 +549,43 @@ python dkrypt.py py-obfuscator --input <input_file> [options]
 ```bash
 python dkrypt.py py-obfuscator --input my_script.py --output obfuscated_script.py --level 3 --key "mysecretkey"
 ```
+
+### GraphQL Introspection & Vulnerability Scanner (`graphql`)
+
+Analyzes GraphQL endpoints for exposed schemas, queries, and possible misconfigurations. Useful for identifying sensitive fields, hidden mutations, and testing endpoint security.
+
+**Usage:**
+
+```bash
+python dkrypt.py graphql --url <graphql_endpoint> [options]
+```
+
+| Option                | Type    | Default        | Description                                                                               | Required |
+| --------------------- | ------- | -------------- | ----------------------------------------------------------------------------------------- | -------- |
+| `--url`               | string  |                | GraphQL endpoint URL to introspect (e.g., `https://example.com/graphql`).                 | Yes      |
+| `--headers`           | string  | `{}`           | Custom headers as JSON string (e.g., `{"Authorization": "Bearer token"}`).                | No       |
+| `--timeout`           | integer | `30`           | Request timeout in seconds (increase for slow endpoints).                                 | No       |
+| `--export`            | string  | `json,csv,txt` | Export formats (comma-separated). Options: `json`, `csv`, `txt`.                          | No       |
+| `--output`            | string  | auto           | Output filename prefix for results. Auto-generated if not specified.                      | No       |
+| `--verbose`           | flag    | False          | Display detailed results in console including queries, mutations, and analysis details.   | No       |
+| `--export-raw`        | flag    | False          | Export raw GraphQL responses even on failure for manual debugging.                        | No       |
+| `--no-header-factory` | flag    | False          | Disable HeaderFactory. Uses static headers instead of realistic rotating headers.         | No       |
+| `--header-pool-size`  | int     | config-based   | Size of HeaderFactory pool for generating browser-like headers.                           | No       |
+| `--rotate-headers`    | flag    | False          | Enable rotating headers per request to mimic different browser sessions (anti-detection). | No       |
+
+**Examples:**
+
+```bash
+# Basic introspection scan
+python dkrypt.py graphql --url https://example.com/graphql
+
+# With custom headers and verbose output
+python dkrypt.py graphql --url https://example.com/graphql --headers '{"Authorization": "Bearer abc123"}' --verbose
+
+# Export results to JSON and TXT with custom filename
+python dkrypt.py graphql --url https://example.com/graphql --export json,txt --output graphql_audit
+```
+
 
 ## 3. Output and Reporting
 
