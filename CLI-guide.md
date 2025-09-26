@@ -453,7 +453,7 @@ python dkrypt.py corstest --url <target_url> [options]
 | Option   | Type    | Default | Description                                                                                             | Required |
 | :------- | :------ | :------ | :------------------------------------------------------------------------------------------------------ | :------- |
 | `--url`    | string  |         | Target URL to scan for CORS misconfigurations (e.g., `https://example.com`)                             | Yes      |
-| `--export` | string  |         | Export format for CORS scan results. Options: `json`, `csv`, or `txt`.                                  | No       |
+| `--export` | string  |         | Export format for CORS scan results. Options: `json`, `csv`, `txt` or `all`.                                  | No       |
 | `--output` | string  |         | File path to save the CORS scan report to.                                                              | No       |
 
 **Example:**

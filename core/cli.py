@@ -923,8 +923,8 @@ def add_corstest_parser(subparsers):
     )
     parser.add_argument(
         "--export", 
-        help="Export format for CORS scan results. Options: 'json', 'csv', or 'txt'.", 
-        choices=["json", "csv", "txt"]
+        help="Export format for CORS scan results. Options: 'json', 'csv', 'txt', or 'all'.", 
+        choices=["json", "csv", "txt", "all"]
     )
     parser.add_argument(
         "--output", 

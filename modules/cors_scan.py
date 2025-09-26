@@ -4,14 +4,15 @@
 CORS Misconfiguration Auditor Module
 """
 
-import requests
+import asyncio
+import aiohttp
 import urllib.parse
 import json
 import csv
 import datetime
 import sys
 import os
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, List, Optional, Tuple
 from rich.console import Console
 from rich.panel import Panel
 from rich.text import Text
@@ -19,25 +20,24 @@ from rich.table import Table
 from rich.progress import Progress, SpinnerColumn, TextColumn
 from rich.prompt import Prompt, Confirm
 import time
+import ssl
 
 from core.randomizer import HeaderFactory
 from core.utils import clear_console, header_banner
 
 console = Console()
 
-class CORSAuditor:
+class CORSAuditor():
     """
-    CORS Auditor class withtesting and export capabilities.
-    
-    This class provides methods to systematically test various CORS attack vectors
-    and provides detailed reporting with multiple export formats.
+    Primary class and scanner logic for CORS including the tests
     """
-    
     def __init__(self):
-        """Initialize the CORS Auditor with default configuration and silent header factory."""
-        self.session = requests.Session()
+        """Initialize the CORS Auditor with default configuration."""
+        self.timeout = 15
+        self.findings = []
+        self.scan_metadata = {}
+        self.max_concurrent_requests = 10
         
-        # Initialize header factory silently by redirecting stdout
         import sys
         from io import StringIO
         
@@ -45,23 +45,31 @@ class CORSAuditor:
         sys.stdout = mystdout = StringIO()
         
         try:
-            self.header_factory = HeaderFactory(pool_size=1000)  # Smaller pool for faster init
+            self.header_factory = HeaderFactory(pool_size=1000)
         except Exception as e:
             console.print(f"[bold red]Warning: Header factory initialization failed: {e}[/bold red]")
             self.header_factory = None
         finally:
             sys.stdout = old_stdout
         
-        self.timeout = 15
-        self.findings = []
-        self.scan_metadata = {}
+        # Dynamic test registry
+        self.test_registry = [
+            ("Baseline Request", self.test_baseline_request),
+            ("Reflective Origin", self.test_reflective_origin),
+            ("Wildcard with Credentials", self.test_wildcard_with_credentials),
+            ("Null Origin Bypass", self.test_null_origin),
+            ("Subdomain/Regex Misconfiguration", self.test_subdomain_regex_misconfig),
+            ("Preflight Headers Analysis", self.test_preflight_headers),
+            ("Insecure Protocols", self.test_insecure_protocols),
+            ("Vary Origin Header Check", self.test_vary_origin),
+            ("Advanced Credential Handling", self.test_advanced_credentials),
+        ]
         
     def get_randomized_headers(self) -> Dict[str, str]:
         """Get randomized headers from the factory or fallback to basic headers."""
         if self.header_factory:
             return self.header_factory.get_headers()
         else:
-            # Fallback headers if factory fails
             return {
                 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
                 'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
@@ -70,26 +78,14 @@ class CORSAuditor:
                 'Connection': 'keep-alive',
             }
         
-    def validate_url(self, url: str) -> tuple:
-        """
-        Validate if the provided URL is properly formatted.
-        
-        Args:
-            url (str): The URL to validate
-            
-        Returns:
-            tuple: (is_valid, normalized_url) where is_valid is bool and 
-                   normalized_url is the properly formatted URL
-        """
+    def validate_url(self, url: str) -> Tuple[bool, Optional[str]]:
+        """Validate if the provided URL is properly formatted."""
         try:
-            # Add https:// if no scheme is provided
             if not url.startswith(('http://', 'https://')):
                 url = 'https://' + url
             
-            # Parse and validate the URL structure
             parsed = urllib.parse.urlparse(url)
             
-            # Check if the URL has a valid scheme and netloc
             if parsed.scheme in ['http', 'https'] and parsed.netloc:
                 return True, url
             else:
@@ -98,441 +94,600 @@ class CORSAuditor:
         except Exception as e:
             return False, None
     
-    def make_request(self, url: str, method: str = 'GET', custom_headers: Dict = None, timeout: int = None) -> Optional[requests.Response]:
-        """
-        Make an HTTP request with randomized headers and error handling.
-        
-        Args:
-            url (str): Target URL
-            method (str): HTTP method (GET, POST, OPTIONS)
-            custom_headers (dict): Additional headers to send (will override randomized ones)
-            timeout (int): Request timeout in seconds
-            
-        Returns:
-            requests.Response or None: Response object or None if request failed
-        """
+    async def make_async_request(self, session: aiohttp.ClientSession, url: str, 
+                                method: str = 'GET', custom_headers: Dict = None) -> Optional[Dict]:
         try:
-            # Start with randomized headers
             request_headers = self.get_randomized_headers()
             
-            # Override with custom headers if provided
             if custom_headers:
                 request_headers.update(custom_headers)
             
-            timeout = timeout or self.timeout
+            timeout = aiohttp.ClientTimeout(total=self.timeout)
             
-            if method.upper() == 'GET':
-                response = self.session.get(url, headers=request_headers, timeout=timeout, verify=False)
-            elif method.upper() == 'OPTIONS':
-                response = self.session.options(url, headers=request_headers, timeout=timeout, verify=False)
-            elif method.upper() == 'POST':
-                response = self.session.post(url, headers=request_headers, timeout=timeout, verify=False)
-            else:
-                return None
+            async with session.request(
+                method=method.upper(),
+                url=url,
+                headers=request_headers,
+                timeout=timeout,
+                ssl=False
+            ) as response:
+                response_headers = dict(response.headers)
+                return {
+                    'status_code': response.status,
+                    'headers': response_headers,
+                    'cors_headers': {k: v for k, v in response_headers.items() 
+                                   if k.lower().startswith('access-control')},
+                    'vary_header': response_headers.get('Vary', ''),
+                    'url': str(response.url)
+                }
                 
-            return response
-            
-        except requests.exceptions.RequestException as e:
-            console.print(f"[bold red]Request failed: {str(e)}[/bold red]")
+        except asyncio.TimeoutError:
+            console.print(f"[bold red]Request timeout for {url}[/bold red]")
+            return None
+        except Exception as e:
+            console.print(f"[bold red]Request failed for {url}: {str(e)}[/bold red]")
             return None
     
-    def test_baseline_request(self, url: str) -> Optional[Dict]:
-        """
-        Perform baseline request without custom Origin header.
-        
-        Args:
-            url (str): Target URL
-            
-        Returns:
-            dict: Baseline response information
-        """
+    async def test_baseline_request(self, session: aiohttp.ClientSession, url: str) -> Optional[Dict]:
+        """Perform baseline request without custom Origin header."""
         console.print("[dim]• Testing baseline request...[/dim]")
         
-        response = self.make_request(url)
+        response = await self.make_async_request(session, url)
         if not response:
             return None
             
-        return {
-            'status_code': response.status_code,
-            'headers': dict(response.headers),
-            'cors_headers': {k: v for k, v in response.headers.items() 
-                           if k.lower().startswith('access-control')}
-        }
+        return response
     
-    def test_reflective_origin(self, url: str) -> Dict:
-        """
-        Test for reflective Origin header vulnerability.
-        
-        This test checks if the server reflects arbitrary Origin headers
-        in the Access-Control-Allow-Origin response header.
-        
-        Args:
-            url (str): Target URL
-            
-        Returns:
-            dict: Test results with vulnerability information
-        """
+    async def test_reflective_origin(self, session: aiohttp.ClientSession, url: str) -> Dict:
+        """test for reflective Origin header vulnerability with comprehensive checks."""
         console.print("[dim]• Testing reflective origin...[/dim]")
         
         test_origins = [
             "https://evil.com",
-            "https://DKRYPT-MODULE.com", 
-            "https://s412wsfm--2412--2312.com"
+            "https://DKRYPT-MODULE.com",
+            "https://s412wsfm--2412--2312.com",
+            "https://attacker-site.evil",
+            "https://malicious.domain",
+            "https://xss.payload.net"
         ]
         
+        vulnerable_origins = []
+        
+        # Test multiple origins to confirm reflective behavior
         for test_origin in test_origins:
             headers = {'Origin': test_origin}
-            response = self.make_request(url, custom_headers=headers)
+            response = await self.make_async_request(session, url, custom_headers=headers)
             
             if not response:
                 continue
                 
-            acao_header = response.headers.get('Access-Control-Allow-Origin', '')
-            acac_header = response.headers.get('Access-Control-Allow-Credentials', '').lower()
+            acao_header = response['headers'].get('Access-Control-Allow-Origin', '')
+            acac_header = response['headers'].get('Access-Control-Allow-Credentials', '').lower()
+            vary_header = response.get('vary_header', '').lower()
             
             if acao_header == test_origin:
-                return {
-                    'vulnerable': True,
-                    'severity': 'HIGH',
-                    'issue': 'Reflective Origin',
-                    'description': f'Server reflects arbitrary origin: {test_origin}',
-                    'test_origin': test_origin,
-                    'response_headers': {
-                        'Access-Control-Allow-Origin': acao_header,
-                        'Access-Control-Allow-Credentials': acac_header
-                    }
-                }
+                vulnerable_origins.append({
+                    'origin': test_origin,
+                    'acao': acao_header,
+                    'acac': acac_header,
+                    'has_vary_origin': 'origin' in vary_header
+                })
+        
+        if vulnerable_origins:
+            # Determine severity based on credentials and vary header
+            severity = 'HIGH'
+            has_credentials = any(vo['acac'] == 'true' for vo in vulnerable_origins)
+            has_vary = any(vo['has_vary_origin'] for vo in vulnerable_origins)
+            
+            if has_credentials and not has_vary:
+                severity = 'CRITICAL'
+            elif has_credentials:
+                severity = 'HIGH'
+            elif not has_vary:
+                severity = 'MEDIUM'
+            else:
+                severity = 'LOW'
+            
+            return {
+                'vulnerable': True,
+                'severity': severity,
+                'issue': 'Reflective Origin Vulnerability',
+                'description': f'Server reflects {len(vulnerable_origins)} different origins. '
+                              f'Credentials: {has_credentials}, Vary header: {has_vary}',
+                'vulnerable_origins': vulnerable_origins,
+                'response_headers': vulnerable_origins[0]  # First example
+            }
         
         return {'vulnerable': False}
     
-    def test_wildcard_with_credentials(self, url: str) -> Dict:
-        """
-        Test for wildcard origin with credentials vulnerability.
-        
-        This is a critical vulnerability where Access-Control-Allow-Origin: *
-        is combined with Access-Control-Allow-Credentials: true.
-        
-        Args:
-            url (str): Target URL
-            
-        Returns:
-            dict: Test results with vulnerability information
-        """
+    async def test_wildcard_with_credentials(self, session: aiohttp.ClientSession, url: str) -> Dict:
+        """test for wildcard origin with credentials vulnerability"""
         console.print("[dim]• Testing wildcard with credentials...[/dim]")
         
-        headers = {'Origin': 'https://evil.com'}
-        response = self.make_request(url, custom_headers=headers)
+        # Test with and without origin header to detect different behaviors
+        test_scenarios = [
+            {'Origin': 'https://evil.com'},
+            {},  # No origin header
+            {'Origin': 'null'},
+        ]
         
-        if not response:
-            return {'vulnerable': False}
+        for headers in test_scenarios:
+            response = await self.make_async_request(session, url, custom_headers=headers)
             
-        acao_header = response.headers.get('Access-Control-Allow-Origin', '')
-        acac_header = response.headers.get('Access-Control-Allow-Credentials', '').lower()
-        
-        if acao_header == '*' and acac_header == 'true':
-            return {
-                'vulnerable': True,
-                'severity': 'CRITICAL',
-                'issue': 'Wildcard with Credentials',
-                'description': 'Wildcard origin combined with credentials=true allows credential theft',
-                'response_headers': {
-                    'Access-Control-Allow-Origin': acao_header,
-                    'Access-Control-Allow-Credentials': acac_header
-                }
-            }
-        elif acao_header == '*':
-            return {
-                'vulnerable': True,
-                'severity': 'MEDIUM',
-                'issue': 'Wildcard Origin',
-                'description': 'Wildcard origin detected (without credentials)',
-                'response_headers': {
-                    'Access-Control-Allow-Origin': acao_header
-                }
-            }
+            if not response:
+                continue
+                
+            acao_header = response['headers'].get('Access-Control-Allow-Origin', '')
+            acac_header = response['headers'].get('Access-Control-Allow-Credentials', '').lower()
+            vary_header = response.get('vary_header', '').lower()
+            
+            if acao_header == '*':
+                if acac_header == 'true':
+                    return {
+                        'vulnerable': True,
+                        'severity': 'CRITICAL',
+                        'issue': 'Wildcard with Credentials (Critical)',
+                        'description': 'Wildcard origin (*) combined with credentials=true - allows credential theft from any origin',
+                        'test_scenario': headers,
+                        'response_headers': {
+                            'Access-Control-Allow-Origin': acao_header,
+                            'Access-Control-Allow-Credentials': acac_header,
+                            'Vary': response.get('vary_header', '')
+                        }
+                    }
+                else:
+                    return {
+                        'vulnerable': True,
+                        'severity': 'MEDIUM',
+                        'issue': 'Wildcard Origin (Medium Risk)',
+                        'description': 'Wildcard origin (*) detected without credentials - allows cross-origin requests from any domain',
+                        'test_scenario': headers,
+                        'response_headers': {
+                            'Access-Control-Allow-Origin': acao_header,
+                            'Vary': response.get('vary_header', '')
+                        }
+                    }
             
         return {'vulnerable': False}
     
-    def test_null_origin(self, url: str) -> Dict:
-        """
-        Test for null origin bypass vulnerability.
-        
-        Some applications incorrectly allow 'null' as a valid origin,
-        which can be exploited through data URIs or sandboxed iframes.
-        
-        Args:
-            url (str): Target URL
-            
-        Returns:
-            dict: Test results with vulnerability information
-        """
+    async def test_null_origin(self, session: aiohttp.ClientSession, url: str) -> Dict:
+        """test for null origin bypass vulnerability"""
         console.print("[dim]• Testing null origin bypass...[/dim]")
         
         headers = {'Origin': 'null'}
-        response = self.make_request(url, custom_headers=headers)
+        response = await self.make_async_request(session, url, custom_headers=headers)
         
         if not response:
             return {'vulnerable': False}
             
-        acao_header = response.headers.get('Access-Control-Allow-Origin', '')
-        acac_header = response.headers.get('Access-Control-Allow-Credentials', '').lower()
+        acao_header = response['headers'].get('Access-Control-Allow-Origin', '')
+        acac_header = response['headers'].get('Access-Control-Allow-Credentials', '').lower()
+        vary_header = response.get('vary_header', '').lower()
         
         if acao_header == 'null':
             severity = 'HIGH' if acac_header == 'true' else 'MEDIUM'
+            has_vary = 'origin' in vary_header
+            
+            if not has_vary and acac_header == 'true':
+                severity = 'CRITICAL'
+            
             return {
                 'vulnerable': True,
                 'severity': severity,
                 'issue': 'Null Origin Bypass',
-                'description': 'Server allows null origin - exploitable via data URIs or sandboxed iframes',
+                'description': f'Server allows null origin - exploitable via data URIs, sandboxed iframes, or file:// protocol. '
+                              f'Vary header present: {has_vary}',
                 'response_headers': {
                     'Access-Control-Allow-Origin': acao_header,
-                    'Access-Control-Allow-Credentials': acac_header
+                    'Access-Control-Allow-Credentials': acac_header,
+                    'Vary': response.get('vary_header', '')
                 }
             }
             
         return {'vulnerable': False}
     
-    def test_subdomain_regex_misconfig(self, url: str) -> Dict:
-        """
-        Test for subdomain/regex misconfiguration vulnerability.
-        
-        This test checks if the server incorrectly validates origins using
-        weak regex patterns that can be bypassed with crafted domain names.
-        
-        Args:
-            url (str): Target URL
-            
-        Returns:
-            dict: Test results with vulnerability information
-        """
+    async def test_subdomain_regex_misconfig(self, session: aiohttp.ClientSession, url: str) -> Dict:
+        """test for subdomain/regex misconfiguration vulnerability."""
         console.print("[dim]• Testing subdomain/regex misconfiguration...[/dim]")
         
-        # Parse the original URL to create realistic attack payloads
         parsed_url = urllib.parse.urlparse(url)
         base_domain = parsed_url.netloc
         
-        # Test various bypass techniques
+        # Expanded bypass techniques
         test_origins = [
             f"https://evil{base_domain}",
             f"https://{base_domain}.evil.com",
             f"https://evil-{base_domain}",
             f"https://{base_domain}evil.com",
-            f"https://sub.{base_domain}.attacker.com"
+            f"https://sub.{base_domain}.attacker.com",
+            f"https://attacker.{base_domain}",
+            f"https://{base_domain}-attacker.com",
+            f"https://evil.{base_domain}",
         ]
+        
+        vulnerable_patterns = []
         
         for test_origin in test_origins:
             headers = {'Origin': test_origin}
-            response = self.make_request(url, custom_headers=headers)
+            response = await self.make_async_request(session, url, custom_headers=headers)
             
             if not response:
                 continue
                 
-            acao_header = response.headers.get('Access-Control-Allow-Origin', '')
-            acac_header = response.headers.get('Access-Control-Allow-Credentials', '').lower()
+            acao_header = response['headers'].get('Access-Control-Allow-Origin', '')
+            acac_header = response['headers'].get('Access-Control-Allow-Credentials', '').lower()
+            vary_header = response.get('vary_header', '').lower()
             
             if acao_header == test_origin:
-                severity = 'HIGH' if acac_header == 'true' else 'MEDIUM'
-                return {
-                    'vulnerable': True,
-                    'severity': severity,
-                    'issue': 'Subdomain/Regex Misconfiguration',
-                    'description': f'Server accepts crafted origin: {test_origin}',
-                    'test_origin': test_origin,
-                    'response_headers': {
-                        'Access-Control-Allow-Origin': acao_header,
-                        'Access-Control-Allow-Credentials': acac_header
-                    }
-                }
+                vulnerable_patterns.append({
+                    'origin': test_origin,
+                    'acao': acao_header,
+                    'acac': acac_header,
+                    'has_vary': 'origin' in vary_header
+                })
         
-        return {'vulnerable': False}
-    
-    def test_preflight_headers(self, url: str) -> Dict:
-        """
-        Test preflight request for overly permissive headers.
-        
-        This test checks if the server responds to OPTIONS requests with
-        overly permissive CORS headers that could enable broader attacks.
-        
-        Args:
-            url (str): Target URL
+        if vulnerable_patterns:
+            has_credentials = any(vp['acac'] == 'true' for vp in vulnerable_patterns)
+            has_vary = any(vp['has_vary'] for vp in vulnerable_patterns)
             
-        Returns:
-            dict: Test results with vulnerability information
-        """
-        console.print("[dim]• Testing preflight headers...[/dim]")
-        
-        headers = {
-            'Origin': 'https://evil.com',
-            'Access-Control-Request-Method': 'POST',
-            'Access-Control-Request-Headers': 'Content-Type, Authorization, X-Custom-Header'
-        }
-        
-        response = self.make_request(url, method='OPTIONS', custom_headers=headers)
-        
-        if not response:
-            return {'vulnerable': False}
+            severity = 'HIGH' if has_credentials else 'MEDIUM'
+            if has_credentials and not has_vary:
+                severity = 'CRITICAL'
             
-        # Extract relevant CORS headers from OPTIONS response
-        acam_header = response.headers.get('Access-Control-Allow-Methods', '')
-        acah_header = response.headers.get('Access-Control-Allow-Headers', '')
-        acao_header = response.headers.get('Access-Control-Allow-Origin', '')
-        acac_header = response.headers.get('Access-Control-Allow-Credentials', '').lower()
-        
-        issues = []
-        severity = 'LOW'
-        
-        # Check for wildcard methods
-        if '*' in acam_header:
-            issues.append("Wildcard methods allowed")
-            severity = 'MEDIUM'
-        elif 'DELETE' in acam_header.upper() or 'PUT' in acam_header.upper():
-            issues.append("Dangerous methods (DELETE/PUT) allowed")
-            severity = 'MEDIUM'
-            
-        # Check for wildcard headers
-        if '*' in acah_header:
-            issues.append("Wildcard headers allowed")
-            severity = 'MEDIUM'
-        elif 'authorization' in acah_header.lower():
-            issues.append("Authorization header allowed")
-            
-        if issues:
             return {
                 'vulnerable': True,
                 'severity': severity,
-                'issue': 'Overly Permissive Preflight',
-                'description': '; '.join(issues),
-                'response_headers': {
-                    'Access-Control-Allow-Methods': acam_header,
-                    'Access-Control-Allow-Headers': acah_header,
-                    'Access-Control-Allow-Origin': acao_header,
-                    'Access-Control-Allow-Credentials': acac_header
-                }
+                'issue': 'Subdomain/Regex Misconfiguration',
+                'description': f'Server accepts {len(vulnerable_patterns)} crafted origins due to weak regex validation',
+                'vulnerable_patterns': vulnerable_patterns,
+                'response_headers': vulnerable_patterns[0]
+            }
+        
+        return {'vulnerable': False}
+    
+    async def test_preflight_headers(self, session: aiohttp.ClientSession, url: str) -> Dict:
+        """preflight request testing with comprehensive header analysi"""
+        console.print("[dim]• Testing preflight headers...[/dim]")
+        
+        # Test multiple preflight scenarios
+        test_scenarios = [
+            {
+                'Origin': 'https://evil.com',
+                'Access-Control-Request-Method': 'POST',
+                'Access-Control-Request-Headers': 'Content-Type, Authorization, X-Custom-Header'
+            },
+            {
+                'Origin': 'https://attacker.com',
+                'Access-Control-Request-Method': 'DELETE',
+                'Access-Control-Request-Headers': 'Authorization, X-API-Key'
+            },
+            {
+                'Origin': 'https://malicious.net',
+                'Access-Control-Request-Method': 'PUT',
+                'Access-Control-Request-Headers': '*'
+            }
+        ]
+        
+        findings = []
+        
+        for scenario in test_scenarios:
+            response = await self.make_async_request(session, url, method='OPTIONS', custom_headers=scenario)
+            
+            if not response:
+                continue
+                
+            acam_header = response['headers'].get('Access-Control-Allow-Methods', '')
+            acah_header = response['headers'].get('Access-Control-Allow-Headers', '')
+            acao_header = response['headers'].get('Access-Control-Allow-Origin', '')
+            acac_header = response['headers'].get('Access-Control-Allow-Credentials', '').lower()
+            vary_header = response.get('vary_header', '').lower()
+            
+            issues = []
+            severity = 'LOW'
+            
+            # analysis
+            if '*' in acam_header:
+                issues.append("Wildcard methods (*) allowed in preflight")
+                severity = 'HIGH'
+            elif any(method.upper() in acam_header.upper() for method in ['DELETE', 'PUT', 'PATCH']):
+                issues.append("Dangerous methods (DELETE/PUT/PATCH) allowed")
+                severity = 'MEDIUM'
+                
+            if '*' in acah_header:
+                issues.append("Wildcard headers (*) allowed - any header accepted")
+                severity = 'HIGH'
+            elif 'authorization' in acah_header.lower():
+                issues.append("Authorization header explicitly allowed")
+                severity = 'MEDIUM'
+                
+            # Check for origin reflection in preflight
+            if acao_header == scenario['Origin']:
+                issues.append("Origin reflected in preflight response")
+                if acac_header == 'true':
+                    severity = 'HIGH'
+            
+            # Check Vary header presence
+            if 'origin' not in vary_header and acao_header not in ['*', '']:
+                issues.append("Missing Vary: Origin header with dynamic CORS")
+                
+            if issues:
+                findings.append({
+                    'severity': severity,
+                    'issues': issues,
+                    'scenario': scenario,
+                    'response_headers': {
+                        'Access-Control-Allow-Methods': acam_header,
+                        'Access-Control-Allow-Headers': acah_header,
+                        'Access-Control-Allow-Origin': acao_header,
+                        'Access-Control-Allow-Credentials': acac_header,
+                        'Vary': response.get('vary_header', '')
+                    }
+                })
+        
+        if findings:
+            # Return the most severe finding
+            most_severe = max(findings, key=lambda x: {'HIGH': 3, 'MEDIUM': 2, 'LOW': 1}.get(x['severity'], 0))
+            
+            return {
+                'vulnerable': True,
+                'severity': most_severe['severity'],
+                'issue': 'Overly Permissive Preflight Configuration',
+                'description': '; '.join(most_severe['issues']),
+                'all_findings': findings,
+                'response_headers': most_severe['response_headers']
             }
             
         return {'vulnerable': False}
     
-    def test_insecure_protocols(self, url: str) -> Dict:
-        """
-        Test for insecure protocol handling in CORS.
-        
-        Args:
-            url (str): Target URL
-            
-        Returns:
-            dict: Test results with vulnerability information
-        """
+    async def test_insecure_protocols(self, session: aiohttp.ClientSession, url: str) -> Dict:
+        """Test for insecure protocol handling in CORS."""
         console.print("[dim]• Testing insecure protocol handling...[/dim]")
         
-        # Test various insecure origins
         test_origins = [
-            "http://evil.com",  # HTTP instead of HTTPS
+            "http://evil.com",
             "file://evil.com",
-            "ftp://evil.com"
+            "ftp://evil.com",
+            "data:text/html,<script>alert('xss')</script>",
         ]
+        
+        vulnerable_protocols = []
         
         for test_origin in test_origins:
             headers = {'Origin': test_origin}
-            response = self.make_request(url, custom_headers=headers)
+            response = await self.make_async_request(session, url, custom_headers=headers)
             
             if not response:
                 continue
                 
-            acao_header = response.headers.get('Access-Control-Allow-Origin', '')
+            acao_header = response['headers'].get('Access-Control-Allow-Origin', '')
+            acac_header = response['headers'].get('Access-Control-Allow-Credentials', '').lower()
             
             if acao_header == test_origin:
-                return {
-                    'vulnerable': True,
-                    'severity': 'MEDIUM',
-                    'issue': 'Insecure Protocol Allowed',
-                    'description': f'Server accepts insecure protocol origin: {test_origin}',
-                    'test_origin': test_origin,
-                    'response_headers': {
-                        'Access-Control-Allow-Origin': acao_header
-                    }
-                }
+                vulnerable_protocols.append({
+                    'origin': test_origin,
+                    'acao': acao_header,
+                    'acac': acac_header
+                })
+        
+        if vulnerable_protocols:
+            has_credentials = any(vp['acac'] == 'true' for vp in vulnerable_protocols)
+            severity = 'HIGH' if has_credentials else 'MEDIUM'
+            
+            return {
+                'vulnerable': True,
+                'severity': severity,
+                'issue': 'Insecure Protocol Origins Allowed',
+                'description': f'Server accepts {len(vulnerable_protocols)} insecure protocol origins',
+                'vulnerable_protocols': vulnerable_protocols,
+                'response_headers': vulnerable_protocols[0]
+            }
         
         return {'vulnerable': False}
     
-    def run_all_tests(self, url: str) -> List[Dict]:
-        """
-        Execute all CORS tests against the target URL.
+    async def test_vary_origin(self, session: aiohttp.ClientSession, url: str) -> Dict:
+        """Test for proper Vary: Origin header implementation."""
+        console.print("[dim]• Testing Vary: Origin header implementation...[/dim]")
         
-        Args:
-            url (str): Target URL to test
+        test_origins = [
+            'https://example1.com',
+            'https://example2.com',
+            None  # No origin header
+        ]
+        
+        responses = []
+        
+        for origin in test_origins:
+            headers = {'Origin': origin} if origin else {}
+            response = await self.make_async_request(session, url, custom_headers=headers)
             
-        Returns:
-            list: List of all findings from the tests
-        """
-        console.print(f"\n[bold green][+] Starting comprehensive CORS scan for {url}...[/bold green]\n")
+            if response:
+                responses.append({
+                    'origin': origin,
+                    'acao': response['headers'].get('Access-Control-Allow-Origin', ''),
+                    'vary': response.get('vary_header', '').lower()
+                })
         
-        # Initialize scan metadata
+        if len(responses) < 2:
+            return {'vulnerable': False}
+        
+        # Check if responses vary but Vary: Origin is missing
+        acao_values = [r['acao'] for r in responses if r['acao']]
+        unique_acao = set(acao_values)
+        has_vary_origin = any('origin' in r['vary'] for r in responses)
+        
+        if len(unique_acao) > 1 and not has_vary_origin:
+            return {
+                'vulnerable': True,
+                'severity': 'LOW',
+                'issue': 'Missing Vary: Origin Header',
+                'description': 'Server returns different CORS headers for different origins but lacks Vary: Origin header - may cause caching issues',
+                'response_analysis': responses
+            }
+        
+        return {'vulnerable': False}
+    
+    async def test_advanced_credentials(self, session: aiohttp.ClientSession, url: str) -> Dict:
+        """test for credential handling edge cases."""
+        console.print("[dim]• Testing advanced credential handling...[/dim]")
+        
+        # Test various credential scenarios
+        test_scenarios = [
+            {'Origin': 'https://evil.com', 'Cookie': 'sessionid=test123'},
+            {'Origin': 'https://attacker.net', 'Authorization': 'Bearer token123'},
+            {'Origin': 'null', 'Cookie': 'auth=secret'},
+        ]
+        
+        credential_issues = []
+        
+        for scenario in test_scenarios:
+            response = await self.make_async_request(session, url, custom_headers=scenario)
+            
+            if not response:
+                continue
+                
+            acao_header = response['headers'].get('Access-Control-Allow-Origin', '')
+            acac_header = response['headers'].get('Access-Control-Allow-Credentials', '').lower()
+            
+            # Check for dangerous credential combinations
+            if (acao_header == '*' and acac_header == 'true') or \
+               (acao_header == scenario['Origin'] and acac_header == 'true'):
+                credential_issues.append({
+                    'scenario': scenario,
+                    'acao': acao_header,
+                    'acac': acac_header,
+                    'risk': 'Credentials allowed with permissive origin'
+                })
+        
+        if credential_issues:
+            return {
+                'vulnerable': True,
+                'severity': 'HIGH',
+                'issue': 'Advanced Credential Handling Issues',
+                'description': f'Found {len(credential_issues)} credential handling vulnerabilities',
+                'credential_issues': credential_issues
+            }
+        
+        return {'vulnerable': False}
+    
+    async def run_all_tests_async(self, url: str) -> List[Dict]:
+        """Execute all CORS tests asynchronously against the target URL."""
+        console.print(f"\n\n\n[bold green][+] Starting  CORS scan for {url}...[/bold green]\n")
+        
+        # Initialize scan metadata with dynamic test count
+        total_tests = len(self.test_registry)
         self.scan_metadata = {
             'target_url': url,
             'scan_time': datetime.datetime.now().isoformat(),
-            'total_tests': 6,
-            'completed_tests': 0
+            'total_tests': total_tests,
+            'completed_tests': 0,
+            'async_enabled': True
         }
         
-        # Initialize findings list
         self.findings = []
         
-        with Progress(
-            SpinnerColumn(),
-            TextColumn("[progress.description]{task.description}"),
-            console=console
-        ) as progress:
-            
-            # Test baseline
-            task = progress.add_task("Running baseline test...", total=1)
-            baseline = self.test_baseline_request(url)
-            progress.advance(task)
-            progress.remove_task(task)
-            
-            if not baseline:
-                console.print("[bold red]Failed to establish baseline connection![/bold red]")
-                return []
-            
-            self.scan_metadata['baseline_status'] = baseline['status_code']
-            
-            # Run all vulnerability tests
-            tests = [
-                ("Reflective origin test", self.test_reflective_origin),
-                ("Wildcard credentials test", self.test_wildcard_with_credentials),
-                ("Null origin test", self.test_null_origin),
-                ("Subdomain/regex test", self.test_subdomain_regex_misconfig),
-                ("Preflight headers test", self.test_preflight_headers),
-                ("Insecure protocols test", self.test_insecure_protocols)
-            ]
-            
-            for test_name, test_func in tests:
-                task = progress.add_task(f"Running {test_name}...", total=1)
-                result = test_func(url)
+        # Create SSL context that doesn't verify certificates
+        ssl_context = ssl.create_default_context()
+        ssl_context.check_hostname = False
+        ssl_context.verify_mode = ssl.CERT_NONE
+        
+        # Create connector with SSL context
+        connector = aiohttp.TCPConnector(
+            limit=self.max_concurrent_requests,
+            ssl=ssl_context
+        )
+        
+        async with aiohttp.ClientSession(connector=connector) as session:
+            with Progress(
+                SpinnerColumn(),
+                TextColumn("[progress.description]{task.description}"),
+                console=console
+            ) as progress:
                 
-                if result and result.get('vulnerable'):
-                    self.findings.append(result)
+                # Run baseline test first
+                baseline_task = progress.add_task("Running baseline test...", total=1)
+                baseline = await self.test_baseline_request(session, url)
+                progress.advance(baseline_task)
+                progress.remove_task(baseline_task)
+                
+                if not baseline:
+                    console.print("[bold red]Failed to establish baseline connection![/bold red]")
+                    return []
+                
+                self.scan_metadata['baseline_status'] = baseline['status_code']
+                
+                # Create tasks for all vulnerability tests (excluding baseline)
+                test_tasks = []
+                progress_tasks = []
+                
+                for test_name, test_func in self.test_registry[1:]:  # Skip baseline test
+                    if test_func != self.test_baseline_request:  # Double check
+                        task_id = progress.add_task(f"Running {test_name.lower()}...", total=1)
+                        progress_tasks.append(task_id)
+                        test_tasks.append(test_func(session, url))
+                
+                # Execute all tests concurrently
+                results = await asyncio.gather(*test_tasks, return_exceptions=True)
+                
+                # Process results and update progress
+                for i, result in enumerate(results):
+                    if isinstance(result, Exception):
+                        console.print(f"[bold red]Test failed: {str(result)}[/bold red]")
+                    elif result and result.get('vulnerable'):
+                        self.findings.append(result)
                     
-                self.scan_metadata['completed_tests'] += 1
-                progress.advance(task)
-                progress.remove_task(task)
+                    if i < len(progress_tasks):
+                        progress.advance(progress_tasks[i])
+                        progress.remove_task(progress_tasks[i])
+                    
+                    self.scan_metadata['completed_tests'] += 1
         
         self.scan_metadata['total_vulnerabilities'] = len(self.findings)
         return self.findings
     
+    def get_export_dir(self, base_export_dir: str = "reports/cors_scan") -> str:
+        """Get export directory based on target domain and timestamp"""
+        try:
+            target_url = self.scan_metadata.get('target_url', 'unknown_target')
+            parsed_url = urllib.parse.urlparse(target_url)
+            domain = parsed_url.netloc.replace('.', '_')  
+            
+            scan_time = self.scan_metadata.get('scan_time', datetime.datetime.now())
+            if isinstance(scan_time, str):
+                scan_time = datetime.datetime.fromisoformat(scan_time)
+            
+            timestamp_str = scan_time.strftime("%Y%m%d_%H%M%S")
+            
+            folder_name = f"{domain}_{timestamp_str}"
+            export_dir = os.path.join(base_export_dir, folder_name)
+            
+            return export_dir
+            
+        except Exception as e:
+            console.print(f"[bold yellow]Warning: Could not create target-based folder: {e}[/bold yellow]")
+            timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+            return os.path.join(base_export_dir, f"scan_{timestamp}")
+    
     def export_to_json(self, filename: str = None) -> str:
         """Export scan results to JSON format."""
-        export_dir = "../reports/cors_scan"
-        os.makedirs(export_dir, exist_ok=True)
         
         if not filename:
             timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
             filename = f"cors_scan_{timestamp}.json"
         
+        export_dir = self.get_export_dir()
+        os.makedirs(export_dir, exist_ok=True)
         full_path = os.path.join(export_dir, filename)
         
         export_data = {
             'scan_metadata': self.scan_metadata,
-            'findings': self.findings
+            'findings': self.findings,
+            'enhancement_notes': {
+                'dynamic_test_count': True,
+                'async_scanning': True,
+                'detection': True,
+                'vary_header_checks': True,
+                'preflight': True
+            }
         }
         
         with open(full_path, 'w', encoding='utf-8') as f:
@@ -542,17 +697,17 @@ class CORSAuditor:
         
     def export_to_csv(self, filename: str = None) -> str:
         """Export scan results to CSV format."""
-        export_dir = "../reports/cors_scan"
-        os.makedirs(export_dir, exist_ok=True)
         
         if not filename:
             timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
             filename = f"cors_scan_{timestamp}.csv"
         
+        export_dir = self.get_export_dir()
+        os.makedirs(export_dir, exist_ok=True)
         full_path = os.path.join(export_dir, filename)
         
         with open(full_path, 'w', newline='', encoding='utf-8') as csvfile:
-            fieldnames = ['Severity', 'Issue', 'Description', 'Test_Origin', 'ACAO_Header', 'ACAC_Header']
+            fieldnames = ['Severity', 'Issue', 'Description', 'Test_Data', 'ACAO_Header', 'ACAC_Header', 'Vary_Header']
             writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
             
             writer.writeheader()
@@ -561,38 +716,40 @@ class CORSAuditor:
                     'Severity': finding.get('severity', ''),
                     'Issue': finding.get('issue', ''),
                     'Description': finding.get('description', ''),
-                    'Test_Origin': finding.get('test_origin', ''),
+                    'Test_Data': str(finding.get('test_origin', finding.get('test_scenario', ''))),
                     'ACAO_Header': finding.get('response_headers', {}).get('Access-Control-Allow-Origin', ''),
-                    'ACAC_Header': finding.get('response_headers', {}).get('Access-Control-Allow-Credentials', '')
+                    'ACAC_Header': finding.get('response_headers', {}).get('Access-Control-Allow-Credentials', ''),
+                    'Vary_Header': finding.get('response_headers', {}).get('Vary', '')
                 }
                 writer.writerow(row)
-        
+                
+        return full_path        
     
     def export_to_txt(self, filename: str = None) -> str:
         """Export scan results to readable text format."""
-        export_dir = "../reports/cors_scan"
-        os.makedirs(export_dir, exist_ok=True)
         
         if not filename:
             timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
             filename = f"cors_scan_{timestamp}.txt"
         
+        export_dir = self.get_export_dir()
+        os.makedirs(export_dir, exist_ok=True)
         full_path = os.path.join(export_dir, filename)
         
         with open(full_path, 'w', encoding='utf-8') as f:
-            f.write("="*60 + "\n")
+            f.write("=== Scanned by DKrypt ===\n")
             f.write("CORS MISCONFIGURATION AUDIT REPORT\n")
-            f.write("="*60 + "\n\n")
             
             f.write(f"Target URL: {self.scan_metadata.get('target_url', 'N/A')}\n")
             f.write(f"Scan Time: {self.scan_metadata.get('scan_time', 'N/A')}\n")
+            f.write(f"Total Tests Run: {self.scan_metadata.get('total_tests', 'N/A')}\n")
+            f.write(f"Async Scanning: {self.scan_metadata.get('async_enabled', False)}\n")
             f.write(f"Total Vulnerabilities Found: {len(self.findings)}\n\n")
             
             if not self.findings:
                 f.write("No CORS misconfigurations detected.\n")
                 f.write("The target appears to have proper CORS configuration.\n")
             else:
-                # Sort findings by severity
                 severity_order = {'CRITICAL': 0, 'HIGH': 1, 'MEDIUM': 2, 'LOW': 3}
                 sorted_findings = sorted(self.findings, key=lambda x: severity_order.get(x['severity'], 4))
                 
@@ -600,90 +757,118 @@ class CORSAuditor:
                     f.write(f"{i}. [{finding['severity']}] {finding['issue']}\n")
                     f.write(f"   Description: {finding['description']}\n")
                     
+                    # Handle different types of test data
                     if 'test_origin' in finding:
                         f.write(f"   Test Origin: {finding['test_origin']}\n")
+                    elif 'test_scenario' in finding:
+                        f.write(f"   Test Scenario: {finding['test_scenario']}\n")
+                    elif 'vulnerable_origins' in finding:
+                        f.write(f"   Vulnerable Origins: {len(finding['vulnerable_origins'])} found\n")
                     
                     f.write("   Response Headers:\n")
-                    for header, value in finding.get('response_headers', {}).items():
-                        if value:
-                            f.write(f"     {header}: {value}\n")
+                    headers = finding.get('response_headers', {})
+                    if isinstance(headers, dict):
+                        for header, value in headers.items():
+                            if value:
+                                f.write(f"     {header}: {value}\n")
                     f.write("\n")
+                
+                # Summary statistics
+                f.write("="*50 + "\n")
+                f.write("SUMMARY STATISTICS\n")
+                f.write("="*50 + "\n")
+                critical_count = sum(1 for f in self.findings if f['severity'] == 'CRITICAL')
+                high_count = sum(1 for f in self.findings if f['severity'] == 'HIGH')
+                medium_count = sum(1 for f in self.findings if f['severity'] == 'MEDIUM')
+                low_count = sum(1 for f in self.findings if f['severity'] == 'LOW')
+                
+                f.write(f"Critical Issues: {critical_count}\n")
+                f.write(f"High Severity: {high_count}\n")
+                f.write(f"Medium Severity: {medium_count}\n")
+                f.write(f"Low Severity: {low_count}\n")
         
         return full_path
     
     def display_results(self, url: str, findings: List[Dict]):
-        """
-        Display the audit results in a formatted TUI style.
-        
-        Args:
-            url (str): Target URL that was tested
-            findings (list): List of vulnerability findings
-        """
-        console.print(f"\n[bold cyan]╔══ CORS Audit Results ══╗[/bold cyan]")
-        console.print(f"[bold white]Target: {url}[/bold white]\n")
+        console.print(f"\n[bold cyan]╔═══ CORS Audit Results ═══╗[/bold cyan]")
+        console.print(f"[bold white]Target: {url}[/bold white]")
+        console.print(f"[dim]Tests Run: {self.scan_metadata.get('total_tests', 'N/A')} | Async: {self.scan_metadata.get('async_enabled', False)}[/dim]\n")
         
         if not findings:
-            # No vulnerabilities found
             console.print("[green]└─ ✓ No CORS misconfiguration detected.[/green]")
-            console.print("\n[dim]The target appears to have proper CORS configuration.[/dim]")
+            console.print("\n[dim]The target appears to have proper CORS configuration with all checks passed.[/dim]")
             return
         
         # Sort findings by severity
         severity_order = {'CRITICAL': 0, 'HIGH': 1, 'MEDIUM': 2, 'LOW': 3}
         sorted_findings = sorted(findings, key=lambda x: severity_order.get(x['severity'], 4))
         
-        # Display each finding
         for i, finding in enumerate(sorted_findings):
             severity = finding['severity']
             issue = finding['issue']
             description = finding['description']
-            headers = finding.get('response_headers', {})
             
-            # Color code by severity
+            # color coding by severity
             severity_colors = {
-                'CRITICAL': 'bold red',
-                'HIGH': 'bold yellow', 
-                'MEDIUM': 'bold blue',
-                'LOW': 'dim white'
+                'CRITICAL': 'bold red on white',
+                'HIGH': 'bold red', 
+                'MEDIUM': 'bold yellow',
+                'LOW': 'dim blue'
+            }
+            
+            severity_icons = {
+                'CRITICAL': '🔥',
+                'HIGH': '⚠️ ',
+                'MEDIUM': '⚡',
+                'LOW': 'ℹ️ '
             }
             
             color = severity_colors.get(severity, 'white')
+            icon = severity_icons.get(severity, '•')
             
             # Display finding with tree structure
             if i == len(sorted_findings) - 1:
-                console.print(f"[{color}]└─ [{severity}] {issue}[/{color}]")
+                console.print(f"[{color}]└─ {icon} [{severity}] {issue}[/{color}]")
             else:
-                console.print(f"[{color}]├─ [{severity}] {issue}[/{color}]")
+                console.print(f"[{color}]├─ {icon} [{severity}] {issue}[/{color}]")
             
-            # Display description
             if i == len(sorted_findings) - 1:
                 console.print(f"[dim]   └─ {description}[/dim]")
             else:
                 console.print(f"[dim]│  └─ {description}[/dim]")
+                
+            if 'vulnerable_origins' in finding:
+                count = len(finding['vulnerable_origins'])
+                if i == len(sorted_findings) - 1:
+                    console.print(f"[dim]      └─ Found {count} vulnerable origins[/dim]")
+                else:
+                    console.print(f"[dim]│     └─ Found {count} vulnerable origins[/dim]")
         
-        # Display summary
+        #summary with statistics
         critical_count = sum(1 for f in findings if f['severity'] == 'CRITICAL')
         high_count = sum(1 for f in findings if f['severity'] == 'HIGH')
+        medium_count = sum(1 for f in findings if f['severity'] == 'MEDIUM')
+        low_count = sum(1 for f in findings if f['severity'] == 'LOW')
         
-        console.print(f"\n[bold white]Summary:[/bold white]")
+        console.print(f"\n[bold white]Scan Summary:[/bold white]")
+        
         if critical_count > 0:
-            console.print(f"[bold red]⚠️  CRITICAL issues found: {critical_count}[/bold red]")
+            console.print(f"[bold red on white]🔥 CRITICAL: {critical_count} - Immediate action required![/bold red on white]")
         if high_count > 0:
-            console.print(f"[bold yellow]⚠️  HIGH severity issues found: {high_count}[/bold yellow]")
+            console.print(f"[bold red]⚠️  HIGH: {high_count} - Security risk present[/bold red]")
+        if medium_count > 0:
+            console.print(f"[bold yellow]⚡ MEDIUM: {medium_count} - Potential vulnerabilities[/bold yellow]")
+        if low_count > 0:
+            console.print(f"[dim blue]ℹ️  LOW: {low_count} - Minor issues or recommendations[/dim blue]")
         
-        console.print(f"[dim]Total issues: {len(findings)}[/dim]")
+        console.print(f"[dim]Total issues found: {len(findings)}[/dim]")
 
 
 def get_target_url():
-    """
-    Prompt user for target URL with validation.
-    
-    Returns:
-        str or None: Valid URL or None if user wants to exit
-    """
+    """Prompt user for target URL with validation."""
     while True:
         try:
-            console.print("\n[bold cyan]╔══ CORS Misconfiguration Auditor ══╗[/bold cyan]")
+            console.print("\n[bold cyan]╔═══ CORS Misconfiguration Auditor ═══╗[/bold cyan]")
             console.print("[dim]Enter target URL (or 'q' to quit):[/dim]")
             
             url = console.input("[bold white]Target URL: [/bold white]").strip()
@@ -730,21 +915,21 @@ def handle_export_options(auditor: CORSAuditor):
     try:
         if export_choice == "json":
             filename = auditor.export_to_json()
-            console.print(f"[green]✓ Results exported to: {filename}[/green]")
+            console.print(f"[green]✓ results exported to: {filename}[/green]")
         
         elif export_choice == "csv":
             filename = auditor.export_to_csv()
-            console.print(f"[green]✓ Results exported to: {filename}[/green]")
+            console.print(f"[green]✓ results exported to: {filename}[/green]")
         
         elif export_choice == "txt":
             filename = auditor.export_to_txt()
-            console.print(f"[green]✓ Results exported to: {filename}[/green]")
+            console.print(f"[green]✓ results exported to: {filename}[/green]")
         
         elif export_choice == "all":
             json_file = auditor.export_to_json()
             csv_file = auditor.export_to_csv()
             txt_file = auditor.export_to_txt()
-            console.print(f"[green]✓ Results exported to:[/green]")
+            console.print(f"[green]✓ results exported to:[/green]")
             console.print(f"[green]  - JSON: {json_file}[/green]")
             console.print(f"[green]  - CSV: {csv_file}[/green]")
             console.print(f"[green]  - TXT: {txt_file}[/green]")
@@ -753,18 +938,14 @@ def handle_export_options(auditor: CORSAuditor):
         console.print(f"[bold red]Export failed: {str(e)}[/bold red]")
 
 
-def main(args=None):
-    """
-    Main function that orchestrates the enhanced CORS auditing process.
-    """
+async def main_async(args=None):
     try:
-        # Disable urllib3 warnings for unverified HTTPS requests
+        # Disable urllib3 warnings
         import urllib3
         urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
         
         clear_console()
-        
-        header_banner(tool_name="CORS Misconfig Scanner")
+        header_banner(tool_name="CORS Scanner")
 
         if args:
             target_url = args.url
@@ -777,30 +958,72 @@ def main(args=None):
                 console.print("[bold red]Exiting...[/bold red]")
                 return
         
-        # Initialize auditor and run tests
         auditor = CORSAuditor()
-        findings = auditor.run_all_tests(target_url)
         
-        # Display results
+        start_time = time.time()
+        findings = await auditor.run_all_tests_async(target_url)
+        scan_duration = time.time() - start_time
+        
+        # Add performance metrics
+        auditor.scan_metadata['scan_duration_seconds'] = round(scan_duration, 2)
+        
+        # Displayresults
         auditor.display_results(target_url, findings)
+        
+        console.print(f"\n[dim]Scan completed in {scan_duration:.2f} seconds with async processing[/dim]")
         
         if args:
             if export_format:
                 if export_format == 'json':
-                    auditor.export_to_json(output_file)
+                    filename = auditor.export_to_json(output_file)
+                    console.print(f"[green]✓ results exported to: {filename}[/green]")
                 elif export_format == 'csv':
-                    auditor.export_to_csv(output_file)
+                    filename = auditor.export_to_csv(output_file)
+                    console.print(f"[green]✓ results exported to: {filename}[/green]")
                 elif export_format == 'txt':
-                    auditor.export_to_txt(output_file)
+                    filename = auditor.export_to_txt(output_file)
+                    console.print(f"[green]✓ results exported to: {filename}[/green]")
+                    
+                elif export_format == 'all':
+                    json_file = auditor.export_to_json()
+                    csv_file = auditor.export_to_csv()
+                    txt_file = auditor.export_to_txt()
+                    console.print(f"[green]✓ results exported to:[/green]")
+                    console.print(f"[green]  - JSON: {json_file}[/green]")
+                    console.print(f"[green]  - CSV: {csv_file}[/green]")
+                    console.print(f"[green]  - TXT: {txt_file}[/green]")    
         else:
             # Handle export options
             handle_export_options(auditor)
         
-        console.print(f"\n[bold green]✓ Scan completed successfully![/bold green]")
+        console.print(f"\n[bold green]✓ scan completed successfully![/bold green]")
         
     except KeyboardInterrupt:
-        console.print("\n[bold yellow]Program interrupted by user. Exiting.[/bold yellow]")
+        console.print("\n[bold yellow]scan interrupted by user. Exiting.[/bold yellow]")
         sys.exit(1)
     except Exception as e:
-        console.print(f"\n[bold red]Unexpected error: {str(e)}[/bold red]")
+        console.print(f"\n[bold red]Unexpected error in scanner: {str(e)}[/bold red]")
         sys.exit(1)
+
+
+def main(args=None):
+    try:
+        loop = asyncio.get_event_loop()
+        if loop.is_running():
+            import concurrent.futures
+            with concurrent.futures.ThreadPoolExecutor() as executor:
+                future = executor.submit(asyncio.run, main_async(args))
+                return future.result()
+        else:
+            return asyncio.run(main_async(args))
+    except RuntimeError:
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        try:
+            return loop.run_until_complete(main_async(args))
+        finally:
+            loop.close()
+
+
+if __name__ == "__main__":
+    main()
