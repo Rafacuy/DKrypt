@@ -800,8 +800,31 @@ class SQLiScanner:
             console.print(f"[bold red]Scan failed: {e}[/bold red]")
             console.print("[dim]Please check your internet connection and target URL.[/dim]")
 
-def run_sqli_scan(url, test_forms, test_headers, test_apis, export_format):
+def run_sqli_scan(url=None, test_forms=None, test_headers=None, test_apis=None, export_format=None):
     """Entry point for the enhanced SQLi scanner"""
+    
+    if url is None:
+        # Interactive TUI mode
+        clear_console()
+        header_banner(tool_name="SQLi Scanner")
+        console.print(Panel(
+            "[bold cyan]Welcome to the SQLi Scanner![/bold cyan]\n\n"
+            "This tool will perform a comprehensive scan for SQL injection vulnerabilities.\n"
+            "You will be prompted to enter the target URL and select scan options.",
+            title="[bold]Interactive Mode[/bold]",
+            style="blue"
+        ))
+        
+        url = Prompt.ask("\nEnter the target URL to scan")
+        test_forms = Confirm.ask("Test POST forms for SQLi?", default=True)
+        test_headers = Confirm.ask("Test HTTP headers for SQLi?", default=False)
+        test_apis = Confirm.ask("Test API endpoints for SQLi?", default=False)
+        export_format = Prompt.ask(
+            "Choose export format",
+            choices=["html", "csv", "none"],
+            default="html"
+        )
+
     scanner = SQLiScanner()
     
     try:
@@ -814,4 +837,4 @@ def run_sqli_scan(url, test_forms, test_headers, test_apis, export_format):
                 target_domain = "interrupted_scan"
                 scanner.export_report(scanner.vulnerabilities, target_domain, "html")
     except Exception as e:
-        console.print(f"[bold red]Critical error: {e}[bold red]")
+        console.print(f"[bold red]Critical error: {e}[/bold red]")

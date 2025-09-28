@@ -824,9 +824,13 @@ async def main_menu(args=None):
                            choices=["1", "2", "3", "4", "5"], default="1")
 
         if choice == '1':
-            await run_single_scan()
+            target = Prompt.ask("Enter target URL or IP address")
+            ports_str, scan_type, timing, service_detection, os_detection, script_scan, custom_args, verbosity, output_format = get_scan_parameters()
+            await run_single_scan(target, ports_str, scan_type, timing, service_detection, os_detection, script_scan, custom_args, verbosity, output_format)
         elif choice == '2':
-            await run_batch_scan()
+            file_path = Prompt.ask("Enter path to file with targets")
+            ports_str, scan_type, timing, service_detection, os_detection, script_scan, custom_args, verbosity, output_format = get_scan_parameters(is_batch=True)
+            await run_batch_scan(file_path, ports_str, scan_type, timing, service_detection, os_detection, script_scan, custom_args, verbosity, output_format)
         elif choice == '3':
             display_nmap_info()
             continue

@@ -687,13 +687,5 @@ def main(cli_args=None):
             tracer.save_results_to_file(results, config['filename'])
 
     else:
-        import argparse
-        
-        parser = argparse.ArgumentParser(description="TracePulse - Traceroute Tool")
-        parser.add_argument('--allow-private', action='store_true',
-                        help='Allow traceroute to private, loopback, and multicast addresses')
-        
-        args = parser.parse_args()
-        
-        tracer = TracePulse(allow_private=args.allow_private)
+        tracer = TracePulse(allow_private=False)
         tracer.run()

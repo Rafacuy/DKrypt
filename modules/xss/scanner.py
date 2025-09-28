@@ -18,6 +18,7 @@ from bs4 import BeautifulSoup
 from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
+from rich.prompt import Prompt, IntPrompt, Confirm
 from rich.progress import (
     Progress,
     BarColumn,
@@ -878,7 +879,159 @@ class XSSScanner:
 
 # ==================== Main Entry Point ====================
 
-async def run_xss_scan(url, threads, rate_limit, max_payloads, batch_size, smart_mode, stealth_mode, test_headers, verbose):
+async def run_xss_scan_interactive():
+    clear_console()
+    header_banner(tool_name="XSS Scanner")
+    
+    url = Prompt.ask("[bold yellow]Target URL[/bold yellow]", default="https://example.com")
+    
+    if not url.startswith(('http://', 'https://')):
+        url = 'https://' + url
+    
+    
+    threads = IntPrompt.ask(
+        "[bold yellow]Number of threads[/bold yellow]", 
+        default=20,
+        show_default=True
+    )
+    
+    rate_limit = IntPrompt.ask(
+        "[bold yellow]Rate limit (requests per second)[/bold yellow]", 
+        default=5,
+        show_default=True
+    )
+    
+    max_payloads = IntPrompt.ask(
+        "[bold yellow]Max payloads per context[/bold yellow]", 
+        default=15,
+        show_default=True
+    )
+    
+    batch_size = IntPrompt.ask(
+        "[bold yellow]Batch size[/bold yellow]", 
+        default=100,
+        show_default=True
+    )
+    
+    # Boolean options
+    smart_mode = Confirm.ask(
+        "[bold yellow]Enable smart mode[/bold yellow]", 
+        default=False
+    )
+    
+    stealth_mode = Confirm.ask(
+        "[bold yellow]Enable stealth mode[/bold yellow]", 
+        default=False
+    )
+    
+    test_headers = Confirm.ask(
+        "[bold yellow]Test headers[/bold yellow]", 
+        default=False
+    )
+    
+    verbose = Confirm.ask(
+        "[bold yellow]Verbose output[/bold yellow]", 
+        default=False
+    )
+    
+    # Display configuration summary
+    config_table = Table.grid(padding=(0, 2), expand=True)
+    config_table.add_column(style="bold cyan", justify="right")
+    config_table.add_column()
+    
+    config_table.add_row("Target URL:", url)
+    config_table.add_row("Threads:", str(threads))
+    config_table.add_row("Rate Limit:", f"{rate_limit} req/s")
+    config_table.add_row("Max Payloads:", str(max_payloads))
+    config_table.add_row("Batch Size:", str(batch_size))
+    config_table.add_row("Smart Mode:", "✓ Enabled" if smart_mode else "✗ Disabled")
+    config_table.add_row("Stealth Mode:", "✓ Enabled" if stealth_mode else "✗ Disabled")
+    config_table.add_row("Test Headers:", "✓ Enabled" if test_headers else "✗ Disabled")
+    config_table.add_row("Verbose:", "✓ Enabled" if verbose else "✗ Disabled")
+    
+    console.print("\n")
+    console.print(Panel(
+        config_table,
+        title="[bold green]Scan Configuration Summary[/bold green]",
+        border_style="blue"
+    ))
+    
+    # Confirm before starting
+    start_scan = Confirm.ask("\n[bold yellow]Start XSS scan with these settings?[/bold yellow]", default=True)
+    
+    if not start_scan:
+        console.print("[yellow]Scan cancelled by user.[/yellow]")
+        return
+    
+    # Run the scan
+    config = {
+        'threads': threads,
+        'rate_limit': rate_limit,
+        'max_payloads_per_context': max_payloads,
+        'batch_size': batch_size,
+        'smart_mode': smart_mode,
+        'stealth_mode': stealth_mode,
+        'test_headers': test_headers,
+        'verbose': verbose
+    }
+
+    scanner = XSSScanner(url, config)
+
+    try:
+        vulnerabilities = await scanner.scan()
+
+        if scanner.cancelled:
+            console.print("\n[yellow]Scan cancelled by user. Displaying results found so far.[/yellow]")
+
+        if vulnerabilities:
+            console.print(f"\n[bold red]Found {len(vulnerabilities)} XSS vulnerabilities![/bold red]\n")
+
+            table = Table(title="XSS Vulnerabilities Summary", show_header=True, header_style="bold magenta", expand=True)
+            table.add_column("Parameter", style="cyan", max_width=20)
+            table.add_column("Context", style="yellow")
+            table.add_column("Severity", style="red")
+            table.add_column("CVSS", style="green")
+            table.add_column("Confidence", style="blue")
+            table.add_column("URL", style="blue", overflow="fold")
+
+            for vuln in sorted(vulnerabilities, key=lambda x: x.cvss_score, reverse=True)[:15]:
+                severity_color = {
+                    'critical': 'bold red', 'high': 'red', 'medium': 'yellow',
+                    'low': 'blue', 'info': 'dim'
+                }.get(vuln.severity.value[2], 'white')
+
+                confidence = f"{(1.0 - vuln.false_positive_score) * 100:.0f}%"
+
+                table.add_row(
+                    vuln.parameter,
+                    vuln.context.value,
+                    f"[{severity_color}]{vuln.severity.value[2].upper()}[/{severity_color}]",
+                    str(vuln.cvss_score),
+                    confidence,
+                    html.escape(vuln.url)
+                )
+
+            console.print(table)
+
+            console.print("\n[bold cyan]Generating reports...[/bold cyan]")
+            reporter = ReportGenerator()
+            reporter.save_report(vulnerabilities, url, format='both')
+
+        elif not scanner.cancelled:
+            console.print("[bold green]No XSS vulnerabilities found![/bold green]")
+
+    except (KeyboardInterrupt, asyncio.CancelledError):
+        console.print("\n[yellow]Scan interrupted by user.[/yellow]")
+    except Exception as e:
+        console.print(f"\n[red]Unexpected error during scan: {e}[/red]")
+        logger.exception("Scan failed with exception")
+
+async def run_xss_scan(url=None, threads=20, rate_limit=5, max_payloads=15, 
+                      batch_size=100, smart_mode=False, stealth_mode=False, 
+                      test_headers=False, verbose=False):
+    if url is None:
+        return await run_xss_scan_interactive()
+    
     clear_console()
     header_banner(tool_name="XSS Scanner")
 
@@ -946,3 +1099,5 @@ async def run_xss_scan(url, threads, rate_limit, max_payloads, batch_size, smart
     except Exception as e:
         console.print(f"\n[red]Unexpected error during scan: {e}[/red]")
         logger.exception("Scan failed with exception")
+
+

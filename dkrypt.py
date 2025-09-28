@@ -5,7 +5,6 @@ from core.menu import MenuSystem
 from core.utils import clear_console
 from core.banner import display_header
 
-# Import modul
 from modules import (
     subdomain, ssl_inspector,
     dir_bruteforcer, header_audit, port_scanner,
@@ -27,7 +26,7 @@ def run_tui():
         choice = menu.show_menu()
 
         if choice == 1:
-            subdomain.main_menu()
+            asyncio.run(subdomain.main_menu())
         elif choice == 2:
             ssl_inspector.run_ssl_inspector()
         elif choice == 3:

@@ -1008,21 +1008,11 @@ async def main_async(args=None):
 
 def main(args=None):
     try:
-        loop = asyncio.get_event_loop()
-        if loop.is_running():
-            import concurrent.futures
-            with concurrent.futures.ThreadPoolExecutor() as executor:
-                future = executor.submit(asyncio.run, main_async(args))
-                return future.result()
-        else:
-            return asyncio.run(main_async(args))
-    except RuntimeError:
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        try:
-            return loop.run_until_complete(main_async(args))
-        finally:
-            loop.close()
+        asyncio.run(main_async(args))
+    except KeyboardInterrupt:
+        console.print("\n[bold yellow]Scan interrupted by user.[/bold yellow]")
+    except Exception as e:
+        console.print(f"[bold red]An unexpected error occurred: {e}[/bold red]")
 
 
 if __name__ == "__main__":
