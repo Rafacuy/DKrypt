@@ -19,7 +19,8 @@ import importlib.util
 import builtins
 
 from core.utils import header_banner, clear_console
-from dkrypt import main as dkrypt_m
+import sys
+import os
 
 # Check if Colorama is available
 try:
@@ -500,8 +501,8 @@ def main(args=None):
     except KeyboardInterrupt:
         print(f"\n{Fore.YELLOW}[!] Operation cancelled by user{Style.RESET_ALL}")
         time.sleep(2)
-        dkrypt_m()
+        return  # Return to caller instead of calling dkrypt_m()
     except Exception as e:
         print(f"\n{Fore.RED}[!] Unexpected error: {e}{Style.RESET_ALL}")
         time.sleep(5)
-        dkrypt_m()
+        return  # Return to caller instead of calling dkrypt_m()

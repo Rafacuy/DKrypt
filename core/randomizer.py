@@ -236,15 +236,11 @@ def _int_to_ip(ip_int: int) -> str:
     return socket.inet_ntoa(struct.pack("!I", ip_int))
 
 def generate_random_ipv4() -> str:
-    """
-    Generates a random, plausible public IPv4 from expanded geo-ranges.
-    Now supports Africa, South America, and Middle East regions.
-    """
     try:
         geo_ranges = config_manager.get("geo_ip_ranges", {})
         if not geo_ranges:
             logger.warning("No geo IP ranges configured, using fallback")
-            return "203.0.113.1"  # RFC5737 test address as fallback
+            return "203.0.113.1"  
         
         # Select random region and range
         region = random.choice(list(geo_ranges.keys()))
@@ -264,10 +260,6 @@ def generate_random_ipv4() -> str:
         return "203.0.113.1"  # RFC5737 fallback
 
 def generate_random_ipv6() -> str:
-    """
-    Generates a random, plausible public IPv6 address with improved randomness.
-    Supports multiple valid unicast prefixes and proper RFC 5952 formatting.
-    """
     try:
         prefixes = config_manager.get("ipv6_prefixes", ["2001"])
         prefix = random.choice(prefixes)

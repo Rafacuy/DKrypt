@@ -9,8 +9,7 @@ from rich.panel import Panel
 from colorama import init, Fore, Style
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from core.utils import load_wordlist, clear_console, header_banner
-
-# Initialize colorama 
+ 
 init()
 
 # Initialize rich console for beautiful output
@@ -113,7 +112,7 @@ def main(args=None):
         extensions = [ext.strip() for ext in args.extensions.split(",")]
         valid_codes = [int(code.strip()) for code in args.valid_codes.split(",")]
         max_workers = args.max_workers
-        report_path = args.report
+        export_path = args.export
     else:
         # --- Get Target URL ---
         base_url = console.input("[bold yellow]Enter the target URL (e.g., https://example.com):[/bold yellow] ").strip()
@@ -153,7 +152,7 @@ def main(args=None):
 
         # --- Tool Configuration ---
         wordlist_path = os.path.join('wordlists', 'directory-brute.txt')
-        report_path = 'dir_reports.txt'
+        export_path = 'dir_reports.txt'
         extensions = ['/', '.php', '.html', '.htm', '.asp', '.aspx', '.js', '.json', '.txt', '.bak', '.old', '.zip', '.tar.gz']
         max_workers = 20 # Number of threads for concurrency
 
@@ -165,6 +164,6 @@ def main(args=None):
     # --- Report Results ---
     if found_urls:
         console.print(f"\n[bold green]Scan complete. Found {len(found_urls)} items.[/bold green]")
-        save_report(found_urls, report_path)
+        save_report(found_urls, export_path)
     else:
-        console.print("\n[bold yellow]Scan complete. No directories or files found.[/bold yellow]")
+        console.print("\n[bold yellow]Scan complete. No directories or files found.[/bold :yellow]")

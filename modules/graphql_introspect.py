@@ -912,57 +912,35 @@ class GraphQLIntrospector:
                 return {}
         return {}
 
-def run_tui():
+def run_cli(args):
     """
-    Run the Text User Interface mode
+    Run the Command Line Interface mode
+
+    Args:
+        args: Parsed command line arguments
     """
-    clear_console()
-    header_banner(tool_name="GraphQL Introspector")
-    
-    # HeaderFactory configuration
-    use_header_factory = True
-    header_pool_size = None
-    
-    if HeaderFactory is not None:
-        if Confirm.ask("[cyan]Use HeaderFactory for realistic headers?[/cyan]", default=True):
-            pool_size_str = Prompt.ask(
-                "[cyan]Header pool size (or press Enter for default)[/cyan]",
-                default=""
-            )
-            if pool_size_str.strip():
-                try:
-                    header_pool_size = int(pool_size_str)
-                except ValueError:
-                    console.print("[yellow]Invalid pool size, using default[/yellow]")
-        else:
-            use_header_factory = False
-    else:
-        console.print("[yellow]HeaderFactory not available, using basic headers[/yellow]")
-        use_header_factory = False
-    
+    # Initialize introspector with HeaderFactory settings
+    use_header_factory = getattr(args, 'use_header_factory', True)
+    header_pool_size = getattr(args, 'header_pool_size', None)
+
     introspector = GraphQLIntrospector(
         use_header_factory=use_header_factory,
         header_pool_size=header_pool_size
     )
-    
-    # Get endpoint URL
-    endpoint = Prompt.ask(
-        "[cyan]Enter GraphQL endpoint URL[/cyan]",
-        default="https://example.com/graphql"
-    )
-    
-    # Get custom headers
+
+    # Parse custom headers if provided
     custom_headers = {}
-    if Confirm.ask("[cyan]Add custom headers?[/cyan]", default=False):
-        while True:
-            header_name = Prompt.ask(
-                "[cyan]Header name (or press Enter to finish)[/cyan]",
-                default=""
-            )
-            if not header_name:
-                break
-            header_value = Prompt.ask(f"[cyan]Value for {header_name}[/cyan]")
-            custom_headers[header_name] = header_value
+    if hasattr(args, 'headers') and args.headers:
+        try:
+            custom_headers = json.loads(args.headers)
+        except json.JSONDecodeError:
+            console.print("[red]Invalid JSON format for headers[/red]")
+            return False
+
+    # Run introspection
+    console.print(f"[blue]Starting GraphQL introspection on: {args.url}[/blue]")
+
+    rotate_headers = getattr(args, 'rotate_headers', False)
     
     # Get timeout
     timeout = int(Prompt.ask("[cyan]Request timeout (seconds)[/cyan]", default="30"))
@@ -1126,74 +1104,70 @@ def run_cli(args):
         return False
 
 def main():
-    if len(sys.argv) == 1:
-        run_tui()
-    else:
-        # Arguments provided, run CLI
-        parser = argparse.ArgumentParser(
-            description="GraphQL Introspection Tool for Penetration Testing",
-            formatter_class=argparse.RawTextHelpFormatter
-        )
-        
-        parser.add_argument(
-            "--url",
-            help="GraphQL endpoint URL to introspect",
-            required=True
-        )
-        parser.add_argument(
-            "--headers",
-            help="Custom headers as JSON string (e.g., '{\"Authorization\": \"Bearer token\"}')",
-            default="{}"
-        )
-        parser.add_argument(
-            "--timeout",
-            help="Request timeout in seconds (default: 30)",
-            type=int,
-            default=30
-        )
-        parser.add_argument(
-            "--export",
-            help="Export formats (comma-separated): json,csv,txt (default: json,csv,txt)",
-            default="json,csv,txt"
-        )
-        parser.add_argument(
-            "--output",
-            help="Output filename prefix (optional)"
-        )
-        parser.add_argument(
-            "--verbose",
-            help="Display detailed results in console",
-            action="store_true"
-        )
-        parser.add_argument(
-            "--export-raw",
-            help="Export raw response even on failure",
-            action="store_true"
-        )
-        
-        # HeaderFactory specific arguments
-        parser.add_argument(
-            "--no-header-factory",
-            help="Disable HeaderFactory and use basic headers instead",
-            action="store_true"
-        )
-        parser.add_argument(
-            "--header-pool-size",
-            help="Size of HeaderFactory pool for generating realistic headers (default: use config)",
-            type=int
-        )
-        parser.add_argument(
-            "--rotate-headers",
-            help="Rotate headers during the request using HeaderFactory",
-            action="store_true"
-        )
-        
-        args = parser.parse_args()
-        
-        args.use_header_factory = not args.no_header_factory
-        
-        success = run_cli(args)
-        sys.exit(0 if success else 1)
+    # Parse command line arguments for CLI mode
+    parser = argparse.ArgumentParser(
+        description="GraphQL Introspection Tool for Penetration Testing",
+        formatter_class=argparse.RawTextHelpFormatter
+    )
+    parser.add_argument(
+        "--url",
+        help="GraphQL endpoint URL to introspect",
+        required=True
+    )
+    parser.add_argument(
+        "--headers",
+        help="Custom headers as JSON string (e.g., '{\"Authorization\": \"Bearer token\"}')",
+        default="{}"
+    )
+    parser.add_argument(
+        "--timeout",
+        help="Request timeout in seconds (default: 30)",
+        type=int,
+        default=30
+    )
+    parser.add_argument(
+        "--export",
+        help="Export formats (comma-separated): json,csv,txt (default: json,csv,txt)",
+        default="json,csv,txt"
+    )
+    parser.add_argument(
+        "--output",
+        help="Output filename prefix (optional)"
+    )
+    parser.add_argument(
+        "--verbose",
+        help="Display detailed results in console",
+        action="store_true"
+    )
+    parser.add_argument(
+        "--export-raw",
+        help="Export raw response even on failure",
+        action="store_true"
+    )
+
+    # HeaderFactory specific arguments
+    parser.add_argument(
+        "--no-header-factory",
+        help="Disable HeaderFactory and use basic headers instead",
+        action="store_true"
+    )
+    parser.add_argument(
+        "--header-pool-size",
+        help="Size of HeaderFactory pool for generating realistic headers (default: use config)",
+        type=int
+    )
+    parser.add_argument(
+        "--rotate-headers",
+        help="Rotate headers during the request using HeaderFactory",
+        action="store_true"
+    )
+
+    args = parser.parse_args()
+
+    args.use_header_factory = not args.no_header_factory
+
+    success = run_cli(args)
+    sys.exit(0 if success else 1)
 
 if __name__ == "__main__":
     main()

@@ -45,3 +45,11 @@ webdriver-manager
 pyyaml
 
 python-nmap
+
+phonenumbers
+
+httpx
+
+h2
+
+typer[all]

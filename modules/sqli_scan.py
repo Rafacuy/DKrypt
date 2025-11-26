@@ -552,7 +552,7 @@ class SQLiScanner:
         console.print(f"[green]Report exported to {filename}[/green]")
         return filename
 
-    def run_comprehensive_scan(self, url, test_forms, test_headers, test_apis, export_format):
+    def run_comprehensive_scan(self, url, test_forms, test_headers, test_apis, export):
         """Main enhanced scanning function"""
         
         clear_console()
@@ -800,7 +800,7 @@ class SQLiScanner:
             console.print(f"[bold red]Scan failed: {e}[/bold red]")
             console.print("[dim]Please check your internet connection and target URL.[/dim]")
 
-def run_sqli_scan(url=None, test_forms=None, test_headers=None, test_apis=None, export_format=None):
+def run_sqli_scan(url=None, test_forms=None, test_headers=None, test_apis=None, export=None):
     """Entry point for the enhanced SQLi scanner"""
     
     if url is None:
@@ -819,7 +819,7 @@ def run_sqli_scan(url=None, test_forms=None, test_headers=None, test_apis=None, 
         test_forms = Confirm.ask("Test POST forms for SQLi?", default=True)
         test_headers = Confirm.ask("Test HTTP headers for SQLi?", default=False)
         test_apis = Confirm.ask("Test API endpoints for SQLi?", default=False)
-        export_format = Prompt.ask(
+        export = Prompt.ask(
             "Choose export format",
             choices=["html", "csv", "none"],
             default="html"
@@ -828,7 +828,7 @@ def run_sqli_scan(url=None, test_forms=None, test_headers=None, test_apis=None, 
     scanner = SQLiScanner()
     
     try:
-        scanner.run_comprehensive_scan(url, test_forms, test_headers, test_apis, export_format)
+        scanner.run_comprehensive_scan(url, test_forms, test_headers, test_apis, export)
     except KeyboardInterrupt:
         console.print("\n[yellow]Scan interrupted by user.[/yellow]")
         if scanner.vulnerabilities:

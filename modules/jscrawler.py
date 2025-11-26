@@ -61,6 +61,7 @@ class JSCrawlerConfig:
     output_format: str = "text"  # 'text', 'json', or 'csv'
     verify_ssl: bool = True
     max_js_size_bytes: int = 5 * 1024 * 1024  # 5 MB
+    user_agent: str = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
 
 
 # --- Patterns & helpers ------------------------------------------------------
@@ -575,59 +576,62 @@ def display_results(results: Dict[str, Iterable], output_file: str) -> None:
 
 # --- CLI / main -----------------------------------------------------------
 
-def main(args=None) -> None:
+def main(
+    url: str = None,
+    output: str = None,
+    depth: int = 3,  # Note: depth is not used in the current implementation
+    selenium: bool = False,
+    extensions: str = ".js",
+    user_agent: str = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
+) -> None:
     clear_console()
     header_banner(tool_name="JS Crawler")
     display_disclaimer()
 
-    if args:
-        target_url = args.url
-        use_selenium = args.selenium
-        output_file = args.output
-        output_format = args.format
-        respect_robots = not args.no_robots
+    # Handle the arguments passed from the CLI
+    if url is not None:
+        target_url = url
     else:
+        # Interactive mode
         target_url = Prompt.ask("🎯 Target URL")
         if not target_url.startswith(("http://", "https://")):
             target_url = "https://" + target_url
 
-        # Selenium availability check
-        selenium_available, selenium_reason = check_selenium_availability()
-        use_selenium = False
-        if selenium_available and JSCrawlerConfig().allow_selenium:
-            use_selenium = Confirm.ask("🔄 Enable JS Rendering (Selenium)?", default=False)
-        else:
-            if JSCrawlerConfig().allow_selenium:
-                console.print(f"[yellow]Selenium unavailable: {selenium_reason}; continuing without Selenium")
+    # Set default output based on target URL if not provided in CLI mode
+    if output is None and url is not None:
+        parsed = urlparse(target_url)
+        domain_hint = parsed.netloc.replace(".", "_")
+        output = f"{domain_hint}_findings.txt"
 
-        # Output format prompt hint
+    # If no output specified and in interactive mode, prompt for it
+    elif output is None:
         parsed = urlparse(target_url)
         domain_hint = parsed.netloc.replace(".", "_")
         default_filename = f"{domain_hint}_findings.txt"
-        output_file = Prompt.ask("📁 Output file (use .json or .csv suffix for machine formats)", default=default_filename)
-        output_format = "text"
-        if output_file.lower().endswith(".json"):
-            output_format = "json"
-        elif output_file.lower().endswith(".csv"):
-            output_format = "csv"
+        output = Prompt.ask("📁 Output file (use .json or .csv suffix for machine formats)", default=default_filename)
 
-        # Allow user to tweak some settings interactively (quick toggle)
-        respect_robots = Confirm.ask("⚙️ Respect robots.txt?", default=True)
+    # Determine output format from output file extension
+    output_format = "text"
+    if output.lower().endswith(".json"):
+        output_format = "json"
+    elif output.lower().endswith(".csv"):
+        output_format = "csv"
 
-    # Build crawler
+    # Build crawler config
     cfg = JSCrawlerConfig(
-        respect_robots=respect_robots,
-        output_format=output_format
+        respect_robots=True,  # CLI mode defaults to respecting robots.txt
+        output_format=output_format,
+        user_agent=user_agent
     )
     crawler = JSCrawler(config=cfg)
 
     try:
-        results = crawler.crawl(target_url, use_selenium=use_selenium)
-        if output_file:
-            display_results(results, output_file)
-            saved = crawler.save_results(results, output_file, target_url)
+        results = crawler.crawl(target_url, use_selenium=selenium)
+        if output:
+            display_results(results, output)
+            saved = crawler.save_results(results, output, target_url)
             if saved:
-                console.print(f"[green]Results saved to {output_file}")
+                console.print(f"[green]Results saved to {output}")
             else:
                 console.print("[red]Failed to save results")
         else:

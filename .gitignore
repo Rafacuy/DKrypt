@@ -7,3 +7,5 @@ reports/
 Thumbs.db
 dist/
 .DS_Store
+legacy/
+tests/
