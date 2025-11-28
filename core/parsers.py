@@ -1,8 +1,4 @@
 #!/usr/bin/env python3
-"""
-Typer-based command parsers for all DKrypt modules (Modern Implementation)
-Provides modern, type-safe CLI interface for all penetration testing tools.
-"""
 
 import typer
 import asyncio
@@ -10,6 +6,7 @@ import json
 import argparse
 from typing import Optional
 from rich.console import Console
+from urllib.parse import urlparse
 
 from modules import (
     subdomain, ssl_inspector,
@@ -23,6 +20,28 @@ from modules.http_desync import main_runner
 from modules.xss import scanner
 
 console = Console()
+
+
+class ArgumentValidator:
+    @staticmethod
+    def validate_url(url: str) -> bool:
+        try:
+            result = urlparse(url)
+            return all([result.scheme in ['http', 'https'], result.netloc])
+        except:
+            return False
+    
+    @staticmethod
+    def validate_port(port: int) -> bool:
+        return 1 <= port <= 65535
+    
+    @staticmethod
+    def validate_positive_int(value: int) -> bool:
+        return value > 0
+    
+    @staticmethod
+    def validate_choice(value: str, choices: list) -> bool:
+        return value in choices
 
 
 def create_parser():
@@ -208,9 +227,17 @@ def register_commands(app: typer.Typer):
         test_apis: bool = typer.Option(False, "--test-apis", help="Enable testing of API endpoints for SQL injection"),
         export: str = typer.Option("html", "--export", help="Export format: html, csv, or none")
     ):
-        """Run SQLI scanner"""
         from core.utils import header_banner
         from core.logger import logger
+        
+        if not ArgumentValidator.validate_url(url):
+            console.print("[red]✗ Invalid URL format. Use http:// or https://[/red]")
+            raise typer.Exit(code=1)
+        
+        if export not in ['html', 'csv', 'none']:
+            console.print("[red]✗ Export format must be html, csv, or none[/red]")
+            raise typer.Exit(code=1)
+        
         header_banner(tool_name="SQLi scanner")
         logger.info(f"Running SQLi scanner on {url}")
         sqli_scan.run_sqli_scan(url, test_forms, test_headers, test_apis, export)
@@ -229,9 +256,21 @@ def register_commands(app: typer.Typer):
         test_headers: bool = typer.Option(False, "--test-headers", help="Test HTTP headers"),
         verbose: bool = typer.Option(False, "--verbose", help="Verbose output")
     ):
-        """Run XSS scanner"""
         from core.utils import header_banner
         from core.logger import logger
+        
+        if not ArgumentValidator.validate_url(url):
+            console.print("[red]✗ Invalid URL format. Use http:// or https://[/red]")
+            raise typer.Exit(code=1)
+        
+        if not ArgumentValidator.validate_positive_int(threads):
+            console.print("[red]✗ Threads must be a positive integer[/red]")
+            raise typer.Exit(code=1)
+        
+        if not ArgumentValidator.validate_positive_int(rate_limit):
+            console.print("[red]✗ Rate limit must be a positive integer[/red]")
+            raise typer.Exit(code=1)
+        
         header_banner(tool_name="XSS scanner")
         logger.info(f"Running XSS scanner on {url}")
         asyncio.run(scanner.run_xss_scan(
@@ -255,9 +294,23 @@ def register_commands(app: typer.Typer):
         header_pool_size: Optional[int] = typer.Option(None, "--header-pool-size", help="HeaderFactory pool size"),
         rotate_headers: bool = typer.Option(False, "--rotate-headers", help="Enable header rotation")
     ):
-        """Run GraphQL introspection"""
         from core.utils import header_banner
         from core.logger import logger
+        
+        if not ArgumentValidator.validate_url(url):
+            console.print("[red]✗ Invalid URL format. Use http:// or https://[/red]")
+            raise typer.Exit(code=1)
+        
+        if timeout <= 0:
+            console.print("[red]✗ Timeout must be positive[/red]")
+            raise typer.Exit(code=1)
+        
+        try:
+            json.loads(headers)
+        except json.JSONDecodeError:
+            console.print("[red]✗ Headers must be valid JSON[/red]")
+            raise typer.Exit(code=1)
+        
         header_banner(tool_name="GraphQL Introspection")
         logger.info(f"Running GraphQL introspection on {url}")
         
