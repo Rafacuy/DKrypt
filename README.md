@@ -20,7 +20,7 @@
 - [🎯 Overview](#-overview)
 - [✨ Key Features](#-key-features)
 - [📦 Quick Start](#-quick-start)
-- [🎨 Interactive Mode](#-interactive-mode)
+- [🎨 Interactive CLI  Mode](#-interactive-mode)
 - [📚 Documentation](#-documentation)
 - [🔧 Available Modules](#-available-modules)
 - [🏗️ Project Structure](#️-project-structure)
@@ -74,20 +74,14 @@ python dkrypt.py xss --url https://example.com/search?q=test --smart-mode
 
 ---
 
-## 🎨 Interactive CLI Mode
+## 🎨 Interactive CLI Mode (BETA)
+The CLI Terminal has a user-friendly interface and rich features,
+ making it suitable for those who want to learn DKrypt.
 
-For the best experience, run DKrypt in interactive mode. This launches a full-featured Text-based User Interface (TUI) inside your terminal.
-
+To run:
 ```bash
-python dkrypt.py
-```
-
-The interactive mode provides:
-- A menu-driven interface to access all modules.
-- Form-based configuration for each scan.
-- Real-time progress indicators and output panels.
-- A more intuitive and user-friendly workflow.
-
+python dkrypt.py i # or interactive
+``` 
 ---
 
 ## 📚 Documentation
