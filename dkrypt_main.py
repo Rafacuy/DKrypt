@@ -7,13 +7,13 @@ Modern main entry point using Typer for improved CLI experience
 import typer
 from typing import Optional
 from rich.console import Console
-from core.interactive_cli import run_interactive_cli
+from core.cli.interactive_cli import run_interactive_cli
 from core.logger import logger
 from core.exceptions import DKryptException, UserCancelledError
 from core.config import config
 from core.diagnostics import run_diagnostics
-from core.help import show_help
-from core.banner import display_header
+from core.utils.help import show_help
+from core.ui.banner import display_header
 
 console = Console()
 
@@ -82,7 +82,7 @@ def callback(ctx: typer.Context):
 
 
 # Import and register all module commands
-from core.parsers import register_commands
+from core.cli.parsers import register_commands
 register_commands(app)
 
 def main():

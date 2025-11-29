@@ -279,6 +279,13 @@
       "lazy_generation": true,
       "parallel_workers": 6,
       "generation_timeout": 45
+    },
+    "paths": {
+      "config_path": "./config/headers_schema.json",
+      "log_path": "./logs/",
+      "temp_path": "./temp/",
+      "output_path": "./output/",
+      "data_path": "./data/"
     }
   }
   

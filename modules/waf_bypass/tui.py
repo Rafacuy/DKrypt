@@ -34,31 +34,33 @@ class WAFTUI:
         self.selected_packs: List[str] = []
         self.custom_headers: List[Dict[str, str]] = []
     
-    def run(self, args=None):
+    def run(self, url=None, method="GET", packs=None, custom_headers=None, 
+              concurrency=10, timeout=10, jitter=0, verify_tls=True, 
+              profile=None, export=None, command=None, **kwargs):
         """Main application entry point"""
-        if args:
-            self.url = args.url
-            self.method = args.method
-            if args.packs:
-                self.selected_packs = [p.strip() for p in args.packs.split(",")]
-            if args.custom_headers:
+        if url:
+            self.url = url
+            self.method = method
+            if packs:
+                self.selected_packs = [p.strip() for p in packs.split(",")]
+            if custom_headers:
                 try:
-                    self.custom_headers = json.loads(args.custom_headers)
+                    self.custom_headers = json.loads(custom_headers)
                 except json.JSONDecodeError:
                     console.print("[bold red]Error: Invalid JSON in --custom-headers[/bold red]")
                     return
-            self.tester.config['max_concurrency'] = args.concurrency
-            self.tester.config['timeout'] = args.timeout
-            self.tester.config['jitter'] = args.jitter
-            self.tester.config['verify_tls'] = args.verify_tls
+            self.tester.config['max_concurrency'] = concurrency
+            self.tester.config['timeout'] = timeout
+            self.tester.config['jitter'] = jitter
+            self.tester.config['verify_tls'] = verify_tls
 
-            if args.profile:
-                self._load_profile(profile_name=args.profile)
+            if profile:
+                self._load_profile(profile_name=profile)
 
             if self.url:
                 asyncio.run(self._start_pipeline())
-                if args.export:
-                    self._export_results(self.tester.last_results, format=args.export)
+                if export:
+                    self._export_results(self.tester.last_results, format=export)
             else:
                 console.print("[bold red]Error: --url is required for CLI mode[/bold red]")
             return

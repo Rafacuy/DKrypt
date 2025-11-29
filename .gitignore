@@ -1,12 +1,56 @@
+# Python
 __pycache__/
-*.pyc
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Virtual Environment
+venv/
+env/
+ENV/
+
+# IDE
 .vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Environment
 .env
+.env.local
+
+# Logs
 *.log
+.dkrypt/logs/
+
+# Reports & Results
 reports/
-Thumbs.db
-dist/
+.dkrypt/results/
+.dkrypt/outputs/
+.dkrypt/cache/
+
+# OS
 .DS_Store
-legacy/
-tests/
-.dkrypt/
+Thumbs.db
+
+# Build & Distribution
+dist/
+build/
+*.egg-info/
+
+# Backup files
+*.bak
+*.backup
+*.tmp
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# Pytest
+.pytest_cache/
+.coverage
+htmlcov/

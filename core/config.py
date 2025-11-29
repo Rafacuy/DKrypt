@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-DKrypt Configuration Management System
+(ALPHA) DKrypt Configuration Management System
 Handles configuration files, environment variables, and defaults
 """
 

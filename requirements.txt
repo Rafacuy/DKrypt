@@ -1,55 +1,36 @@
-dnspython
-
+# Core Framework
+typer[all]
 rich
 
+# HTTP & Network
 requests
-
-colorama
-
-collection
-
-beautifulsoup4
-
-cryptography>=42.0.0
-
-tenacity
-
-datetime
-
-pathlib
-
+httpx
+aiohttp
+h2
 PySocks
 
-socks
-
-graphviz
-
-asyncio
-
-aiohttp
-
-python-whois
-
-pyopenssl
-
-scapy
-
-aiodns
-
+# Web Scraping & Parsing
+beautifulsoup4
 selenium
-
-Appium-Python-Client
-
 webdriver-manager
 
-pyyaml
+# Security & Cryptography
+cryptography
+pyopenssl
 
+# DNS & Network Tools
+dnspython
+aiodns
+python-whois
+scapy
 python-nmap
 
+# DB
+sqlite3
+
+# Utilities
+colorama
+tenacity
+pyyaml
 phonenumbers
-
-httpx
-
-h2
-
-typer[all]
+graphviz

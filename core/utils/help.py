@@ -7,7 +7,7 @@ from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
 from rich.text import Text
-from .module_registry import ModuleRegistry
+from core.module_registry import ModuleRegistry
 
 
 class HelpSystem:
@@ -24,8 +24,8 @@ class HelpSystem:
 
 [bold]USAGE:[/bold]
   python dkrypt.py [OPTIONS] MODULE [MODULE_OPTIONS]
-  python dkrypt.py --interactive  # Interactive mode
-  python dkrypt.py --help         # Show this help
+  python dkrypt.py interactive  # Interactive mode
+  python dkrypt.py help         # Show this help
 
 [bold]COMMON TASKS:[/bold]
   [cyan]Scan for SQL injection:[/cyan]
@@ -38,7 +38,7 @@ class HelpSystem:
     python dkrypt.py subdomain single --target example.com
 
   [cyan]Run interactive CLI:[/cyan]
-    python dkrypt.py -i
+    python dkrypt.py i
 
 [bold]AVAILABLE MODULES:[/bold]
 """
@@ -62,12 +62,14 @@ class HelpSystem:
         help_footer = """
 [bold]GET HELP:[/bold]
   python dkrypt.py MODULE --help       # Show module-specific help
-  python dkrypt.py --diagnostic        # Run system diagnostics
-  python dkrypt.py --list-modules      # List all available modules
+  python dkrypt.py diagnostic        # Run system diagnostics
+  python dkrypt.py list-modules      # List all available modules
 
 [bold]DOCUMENTATION:[/bold]
-  CLI Guide:   See CLI-guide.md
-  Contributor: See CONTRIBUTOR.md
+  CLI Guide             : See CLI-guide.md
+  DKrypt's Architecture : See docs/developer-guide/ARCHITECTURE.md
+  Installation          : See docs/user-guide/INSTALLATION.md 
+  Quickstart            : See docs/user-guide/QUICKSTART.md
   
 [bold]EXAMPLES:[/bold]
   python dkrypt.py subdomain single --target google.com --api-only

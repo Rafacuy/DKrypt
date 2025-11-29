@@ -1,12 +1,12 @@
-# core/utils.py
+# core/utils/utils.py
 import os
 import re
 import random
 from rich.console import Console
 import colorama
 from colorama import Fore,Style,init
-from .menu import MenuConfig
-from .banner import get_banner_art
+from core.cli.menu import MenuConfig
+from core.ui.banner import get_banner_art
 from datetime import datetime
 
 init()

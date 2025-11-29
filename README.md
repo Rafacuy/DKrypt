@@ -1,149 +1,181 @@
 <p align="center">
-<a href="#"><img alt="Dkrypt-logo" src="./docs/logo.png" width="55%" height="55%"></a>
+<a href="#"><img alt="DKrypt Logo" src="./docs/logo.png" width="55%"></a>
 </p>
 
-<em><h5 align="center">Developed by Rafacuy (arazz.)</h5></em>
+<em><h6 align="center">Developed by Rafacuy (arazz.)</h6></em>
 
 <p align="center">
-    <a href="#">
-        <img alt="Python" src="https://img.shields.io/badge/Python-FFD43B?style=for-the-badge&logo=python&logoColor=blue">
-    </a>
-    <a href="#">
-        <img alt="last commit (main)" src="https://img.shields.io/github/last-commit/Rafacuy/DKrypt/main?color=green&style=for-the-badge">
-    </a>
-    <a href="#">
-        <img alt="DKrypt License" src="https://img.shields.io/github/license/Rafacuy/DKrypt?color=orange&style=for-the-badge">
-    </a>
-    <a href="https://github.com/Rafacuy/DKrypt/issues">
-        <img alt="DKrypt issues" src="https://img.shields.io/github/issues/Rafacuy/DKrypt?color=purple&style=for-the-badge">
-    </a>
+    <img alt="Python 3.10+" src="https://img.shields.io/badge/Python-3.10+-FFD43B?style=for-the-badge&logo=python&logoColor=blue">
+    <img alt="Version 1.4.0" src="https://img.shields.io/badge/Version-1.4.0-green?style=for-the-badge">
+    <img alt="Status STABLE" src="https://img.shields.io/badge/Status-STABLE-brightgreen?style=for-the-badge">
+    <img alt="Documentation" src="https://img.shields.io/badge/Docs-Passing-blue.svg?style=for-the-badge">
+    <img alt="License GPL-3.0" src="https://img.shields.io/github/license/Rafacuy/DKrypt?color=orange&style=for-the-badge">
 </p>
 
+---
 
+**DKrypt** is a modern penetration testing framework for security professionals and ethical hackers. Built with Python 3.10+, it provides a unified CLI and a rich interactive TUI for reconnaissance, vulnerability scanning, and security analysis.
 
-<h1 align="center">Introduction</h1>
-DKrypt is an advanced, all-in-one penetration testing framework designed for security professionals, ethical hackers, and IT administrators. Built with modularity and efficiency at its core, DKrypt integrates cutting-edge reconnaissance, vulnerability scanning, and exploitation tools into a unified Text-based user interface (TUI) and a powerful Command Line Interface (CLI). With its real-time visualization and intelligent automation, DKrypt transforms complex security assessments into streamlined workflows.
-
-## _Features_
-- **Directory Bruteforcer**: _Discover hidden directories on target web servers._
-- **Subdomain Discovery**: _Identify subdomains using a wordlist-based scanner._
-- **Security Header Audit**: _Analyze HTTP response headers for security best practices._
-- **SSL/TLS Inspector**: _Get deep insights into SSL/TLS certificate configurations._
-- **Website Crawler**: _Extract page content and links quickly._
-- **JS Crawler & Endpoint Extractor**: _Extract a endpoints and analyze API Key/Token within JS file._
-- **Port Scanner**: _Discover hidden port on the target website._
-- **WAF Bypass tester**: _Bypass WAF on a website to find weaknesses on the website's WAF._
-- **CORS Misconfiguration Auditor**: _Find a vulnerabilites on the CORS Configuration._
-- **HTTP Desync Attack Tester**: _Manipulating header content to inject hidden requests._
-- **SQLi Scanner**: _Scan for SQLi vulnerability within website._
-- **XSS Scanner**: _Scan for XSS vulnerability within website._
-- **Python Obfuscator**: _Protect a python file and make it unreadable._
-- **Tracepulse**: _Trace the route and identify a network problems._
-- **GraphQL introspection**: _GraphQL introspection and vulnerabilities scanning._
+## Table of Contents
+- [🎯 Overview](#-overview)
+- [✨ Key Features](#-key-features)
+- [📦 Quick Start](#-quick-start)
+- [🎨 Interactive Mode](#-interactive-mode)
+- [📚 Documentation](#-documentation)
+- [🔧 Available Modules](#-available-modules)
+- [🏗️ Project Structure](#️-project-structure)
+- [🤝 Contributing](#-contributing)
+- [⚖️ Legal Notice](#️-legal-notice)
+- [📜 License](#-license)
 
 ---
 
-## Installation
+## 🎯 Overview
 
-To get DKrypt up and running on your system, follow these steps:
+DKrypt is designed to be a comprehensive and extensible platform for security testing. It combines a powerful set of tools with a user-friendly interface, allowing both seasoned professionals and newcomers to conduct security assessments efficiently.
 
-### Prerequisites
-Ensure you have **Python 3.10+** and `git` installed on your system.
+## ✨ Key Features
 
-1.  **Clone the Repository**
-    Start by cloning the DKrypt repository to your local machine:
-    ```bash
-    git clone https://github.com/Rafacuy/DKrypt.git
-    cd DKrypt
-    ```
+- 🔍 **15+ Security Modules** - A wide array of tools for SQLi, XSS, CORS, subdomain enumeration, port scanning, and more.
+- ⚡ **High Performance** - Built with asynchronous operations for speed and intelligent rate limiting to avoid detection.
+- 🎨 **Beautiful & Interactive TUI** - A rich, terminal-based user interface that provides a dashboard for running and managing scans in real-time.
+- 📊 **Multiple Export Formats** - Generate reports in JSON, HTML, and CSV.
+- 🛡️ **Production Ready** - With comprehensive error handling and over 105+ tests, DKrypt is built for stability.
+- 🔧 **Modular Architecture** - The framework is designed to be easily extended. Adding new modules is straightforward.
 
-2.  **Set Up Virtual Environment (Recommended)**
-    It's highly recommended to use a virtual environment to manage project dependencies and avoid conflicts with your system's Python packages.
-    ```bash
-    python -m venv venv
-    # Activate the virtual environment
-    # On Windows: .\venv\Scripts\activate
-    # On macOS/Linux: source venv/bin/activate
-    ```
+---
 
-3.  **Install Dependencies**
-    Install all required Python packages using `pip`:
-    ```bash
-    pip install -r requirements.txt
-    ```
-    Alternatively, you can use the provided `install.sh` script (for Linux/macOS) which automates the dependency installation:
-    ```bash
-    bash install.sh
-    ```
+## 📦 Quick Start
 
-### Trouble installing on Termux?
+### Installation
 
-If you're facing issues with `cryptography` or build tools on Termux, just run:
 ```bash
-bash FIX.sh # Only for termux users
+git clone https://github.com/Rafacuy/DKrypt.git
+cd DKrypt
+python -m venv venv
+source venv/bin/activate  # On Windows: .\venv\Scripts\activate
+pip install -r requirements.txt
 ```
-This script will auto-install Termux dependencies for you.
+
+### Basic Usage
+
+While interactive mode is recommended, you can run modules directly from the command line.
+
+```bash
+# Run the SQLi scanner on a target URL
+python dkrypt.py sqli --url https://example.com/vulnerable?id=1
+
+# Discover subdomains for a domain
+python dkrypt.py subdomain single --target example.com
+
+# Scan a URL for XSS vulnerabilities in smart mode
+python dkrypt.py xss --url https://example.com/search?q=test --smart-mode
+```
 
 ---
 
-## Usage
+## 🎨 Interactive CLI Mode
 
-DKrypt offers two primary modes of operation: a Text-based User Interface (TUI) for beginners and a Command Line Interface (CLI) for advanced users and pipeline integration.
+For the best experience, run DKrypt in interactive mode. This launches a full-featured Text-based User Interface (TUI) inside your terminal.
 
-### TUI Mode
-For an interactive, menu-driven experience, simply run DKrypt without any arguments:
 ```bash
 python dkrypt.py
 ```
-This will launch the TUI, allowing you to select and run modules through an easy-to-navigate menu.
 
-### CLI Mode
-For direct execution of modules with specific arguments, use the CLI mode. This is ideal for scripting and automation.
-```bash
-python dkrypt.py <module> [options]
+The interactive mode provides:
+- A menu-driven interface to access all modules.
+- Form-based configuration for each scan.
+- Real-time progress indicators and output panels.
+- A more intuitive and user-friendly workflow.
+
+---
+
+## 📚 Documentation
+
+Our documentation is now complete and covers everything from installation to development.
+
+<details>
+<summary><strong>Click to expand documentation links</strong></summary>
+
+### 👤 User Documentation
+- **[Installation Guide](docs/user-guide/INSTALLATION.md)** - Detailed setup instructions for all platforms.
+- **[Quick Start Guide](docs/user-guide/QUICKSTART.md)** - Get up and running in less than 5 minutes.
+- **[Module Guide](docs/user-guide/MODULES.md)** - A detailed guide to all 15+ security modules and their usage.
+- **[CLI Reference](docs/user-guide/CLI-REFERENCE.md)** - A complete command reference for the CLI.
+
+### 💻 Developer Documentation
+- **[Architecture Overview](docs/developer-guide/ARCHITECTURE.md)** - A look into the system design and structure.
+- **[Contributing Guide](docs/developer-guide/CONTRIBUTING.md)** - The primary guide for anyone who wants to contribute.
+- **[Testing Guide](docs/developer-guide/TESTING.md)** - Instructions on how to run and write tests.
+
+</details>
+
+---
+
+## 🔧 Available Modules
+
+| Module | Description | Command |
+|--------|-------------|---------|
+| **sqli** | SQL Injection Scanner | `dkrypt.py sqli --url <target>` |
+| **xss** | XSS Vulnerability Scanner | `dkrypt.py xss --url <target>` |
+| **subdomain** | Subdomain Enumeration | `dkrypt.py subdomain --domain <target>` |
+| **dirbrute** | Directory Bruteforcer | `dkrypt.py dirbrute --url <target>` |
+| **portscanner** | Advanced Port Scanner | `dkrypt.py portscanner single --target <host>` |
+| **corstest** | CORS Misconfiguration Auditor | `dkrypt.py corstest --url <target>` |
+| **headers** | Security Header Audit | `dkrypt.py headers --url <target>` |
+| **sslinspect** | SSL/TLS Inspector | `dkrypt.py sslinspect --target <host>` |
+| **graphql** | GraphQL Introspection | `dkrypt.py graphql --url <endpoint>` |
+| **waftester** | WAF Bypass Tester | `dkrypt.py waftester --url <target>` |
+| **smuggler** | HTTP Desync Tester | `dkrypt.py smuggler --url <target>` |
+| **crawler** | Website Crawler | `dkrypt.py crawler --url <target>` |
+| **jscrawler** | JS Endpoint Extractor | `dkrypt.py jscrawler --url <target>` |
+| **tracepulse** | Network Route Tracer | `dkrypt.py tracepulse --destination <host>` |
+| **pyobfuscator** | Python Code Obfuscator | `dkrypt.py pyobfuscator --input <file>` |
+
+*For detailed usage and examples, see the [Module Guide](docs/user-guide/MODULES.md).*
+
+---
+
+## 🏗️ Project Structure
 ```
-For detailed instructions on how to use each module via the CLI, including all available options and examples, please refer to the comprehensive [CLI Guide](./CLI-guide.md).
+DKrypt-CLI/
+├── core/         # Core framework (engine, config, logger, etc.)
+├── modules/      # All security testing modules
+├── docs/         # All documentation
+├── tests/        # Test suite (105+ tests)
+├── wordlists/    # Curated wordlists for scanning
+└── dkrypt.py     # Main entry point
+```
 
 ---
 
-## Documentation
-*   **CLI Guide**: A complete guide to using DKrypt's Command Line Interface, including module-specific options and examples.
-    *   [CLI-guide.md](./CLI-guide.md)
-*   **Contributor Guide**: Information for developers interested in contributing to DKrypt, covering setup, code structure, and contribution process.
-    *   [CONTRIBUTOR.md](./CONTRIBUTOR.md)
+## 🤝 Contributing & Community
+
+We welcome contributions of all forms, from documentation to new features. This project thrives on community involvement.
+
+- **[Contributing Guide](docs/developer-guide/CONTRIBUTING.md)**: Learn how to set up your development environment, our coding standards, and the pull request process.
+- **[Code of Conduct](CODE_OF_CONDUCT.md)**: We are committed to fostering an open and welcoming environment.
 
 ---
 
-## Requirements
-- Python 3.10+
-- `rich`, `requests`, `beautifulsoup4`, and other libraries listed in `requirements.txt`
+## ⚖️ Legal Notice
 
-## Wordlists
-DKrypt utilizes various wordlists for tasks like directory brute-forcing and subdomain enumeration.
-Custom wordlists for:
+**IMPORTANT**: DKrypt is intended for authorized and ethical security testing purposes only.
+- ✅ Obtain explicit written permission from the target owner before scanning.
+- ✅ Comply with all applicable local, state, and federal laws.
+- ✅ Use this tool responsibly.
+- ❌ Do not use this tool for malicious purposes.
 
-*   Directory brute-forcing
-*   Subdomain enumeration
-*   Admin panel discovery
-*   Headers Pack
-
-_Located in /wordlists/_
-
-## Contributing
-We welcome contributions to DKrypt! If you're interested in improving the framework, please refer to our [Contributor Guide](./CONTRIBUTOR.md) for detailed instructions on how to set up your environment, code style, and the pull request process.
-
-If you find bugs or want to suggest features, please open an issue on the [GitHub Issues page](https://github.com/Rafacuy/DKrypt/issues).
-
-## Author
-Copyright (C) 2025 Rafacuy (arazz.) 
-
-### _Contact_
-- **Telegram**: [@ArashCuy](https://t.me/@ArashCuy)
-- **TikTok**: [@rafardhancuy](https://tiktok.com/@rafardhancuy)
-- **GitHub**: [@Rafacuy](https://github.com/Rafacuy)
-
-
-## License
-This tool is under the GPL-3.0 License. See the [LICENSE](./LICENSE) for details.
+The developers and contributors assume no liability and are not responsible for any misuse or damage caused by this program.
 
 ---
+
+## 📜 License
+
+This project is licensed under the **GNU General Public License v3.0 (GPL-3.0)**.
+See the [LICENSE](./LICENSE) file for full details.
+
+---
+<p align="center">
+<strong>Made with ❤️ for the Security Community</strong>
+</p>

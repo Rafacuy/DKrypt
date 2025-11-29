@@ -1,0 +1,9 @@
+{
+  "test": [
+    {
+      "module": "sqli",
+      "options": {}
+    }
+  ]
+}
+
