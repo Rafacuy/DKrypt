@@ -13,6 +13,7 @@ PySocks
 beautifulsoup4
 selenium
 webdriver-manager
+Appium-Python-Client
 
 # Security & Cryptography
 cryptography
@@ -24,9 +25,6 @@ aiodns
 python-whois
 scapy
 python-nmap
-
-# DB
-sqlite3
 
 # Utilities
 colorama

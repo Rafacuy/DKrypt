@@ -130,184 +130,8 @@ class InteractiveCLI(cmd.Cmd):
         readline.set_completer_delims(' \t\n;')
         readline.parse_and_bind("tab: complete")
 
-        self.module_list = {
-            'sqli': {
-                'name': 'SQLI Scanner',
-                'description': 'Detect SQL injection vulnerabilities in web applications',
-                'category': 'scanner',
-                'function': lambda args: sqli_scan.run_sqli_scan(**{k: v for k, v in vars(args).items() if k != 'command'}),
-                'options': {
-                    'URL': {'required': True, 'description': 'Target URL to scan', 'validator': 'validate_url'},
-                    'TEST_FORMS': {'required': False, 'description': 'Test POST forms', 'default': False, 'validator': 'validate_boolean'},
-                    'TEST_HEADERS': {'required': False, 'description': 'Test HTTP headers', 'default': False, 'validator': 'validate_boolean'},
-                    'EXPORT': {'required': False, 'description': 'Export format (html/csv/none)', 'default': 'html', 'validator': 'validate_choice', 'choices': ['html', 'csv', 'none']}
-                },
-                'helper': 'Use this tool to detect SQL injection vulnerabilities. Set URL to target and optionally enable test forms/headers.'
-            },
-            'xss': {
-                'name': 'XSS Scanner',
-                'description': 'Detect Cross-Site Scripting vulnerabilities in web applications',
-                'category': 'scanner',
-                'function': lambda args: asyncio.run(scanner.run_xss_scan(**{k: v for k, v in vars(args).items() if k != 'command'})),
-                'options': {
-                    'URL': {'required': True, 'description': 'Target URL to scan', 'validator': 'validate_url'},
-                    'THREADS': {'required': False, 'description': 'Number of threads', 'default': 20, 'validator': 'validate_integer'},
-                    'RATE_LIMIT': {'required': False, 'description': 'Requests per second', 'default': 5, 'validator': 'validate_integer'},
-                    'SMART_MODE': {'required': False, 'description': 'Enable smart mode', 'default': False, 'validator': 'validate_boolean'}
-                },
-                'helper': 'Scan for XSS vulnerabilities. Use URL parameter and adjust threads/rate for performance.'
-            },
-            'graphql': {
-                'name': 'GraphQL Introspector',
-                'description': 'Introspect queries from GraphQL endpoints',
-                'category': 'scanner',
-                'function': lambda args: graphql_introspect.run_cli(**{k: v for k, v in vars(args).items() if k != 'command'}),
-                'options': {
-                    'URL': {'required': True, 'description': 'GraphQL endpoint URL', 'validator': 'validate_url'},
-                    'HEADERS': {'required': False, 'description': 'Custom headers (JSON)', 'default': '{}'},
-                    'VERBOSE': {'required': False, 'description': 'Verbose output', 'default': False, 'validator': 'validate_boolean'}
-                },
-                'helper': 'Analyze GraphQL endpoints for queries and mutations. Supply the GraphQL endpoint URL.'
-            },
-            'portscanner': {
-                'name': 'Port Scanner',
-                'description': 'Advanced Port Scanner (based on NMAP)',
-                'category': 'recon',
-                'function': lambda args: asyncio.run(port_scanner.main_menu(args)),
-                'options': {
-                    'TARGET': {'required': True, 'description': 'Target host to scan', 'validator': 'validate_host'},
-                    'PORTS': {'required': False, 'description': 'Ports to scan', 'default': '1-1024'},
-                    'SCAN_TYPE': {'required': False, 'description': 'Scan type (SYN/CON/UDP)', 'default': 'SYN', 'validator': 'validate_choice', 'choices': ['SYN', 'CON', 'UDP']}
-                },
-                'helper': 'Scan target hosts for open ports and services. Specify target and ports range.'
-            },
-            'subdomain': {
-                'name': 'Subdomain Scanner',
-                'description': 'Discover target subdomains comprehensively',
-                'category': 'recon',
-                'function': lambda args: asyncio.run(subdomain.main_menu(args)),
-                'options': {
-                    'TARGET': {'required': True, 'description': 'Target domain', 'validator': 'validate_domain'},
-                    'RATE_LIMIT': {'required': False, 'description': 'DNS queries rate', 'default': 200, 'validator': 'validate_integer'},
-                    'API_ONLY': {'required': False, 'description': 'Use only API sources', 'default': False, 'validator': 'validate_boolean'}
-                },
-                'helper': 'Find subdomains of a target domain. Use API_ONLY for fast results or full scan for thoroughness.'
-            },
-            'crawler': {
-                'name': 'Website Crawler',
-                'description': 'Extract and analyze website content',
-                'category': 'recon',
-                'function': lambda args: asyncio.run(crawler_utils.main(args)),
-                'options': {
-                    'URL': {'required': True, 'description': 'Starting URL', 'validator': 'validate_url'},
-                    'DEPTH': {'required': False, 'description': 'Crawl depth', 'default': 3, 'validator': 'validate_integer'},
-                    'MAX_URLS': {'required': False, 'description': 'Maximum URLs', 'default': 100, 'validator': 'validate_integer'}
-                },
-                'helper': 'Crawl websites to find links and pages. Set URL and adjust depth/max URLs for scope.'
-            },
-            'headers': {
-                'name': 'Security Header Audit',
-                'description': 'Evaluate HTTP security headers',
-                'category': 'audit',
-                'function': lambda args: header_audit.HeaderAuditor().run(args),
-                'options': {
-                    'URL': {'required': True, 'description': 'Target URL', 'validator': 'validate_url'},
-                    'VERBOSE': {'required': False, 'description': 'Verbose output', 'default': False, 'validator': 'validate_boolean'}
-                },
-                'helper': 'Check security headers of web applications. Requires target URL.'
-            },
-            'dirbrute': {
-                'name': 'Directory Bruteforcer',
-                'description': 'Search for hidden directories and files',
-                'category': 'recon',
-                'function': lambda args: dir_bruteforcer.main(args),
-                'options': {
-                    'URL': {'required': True, 'description': 'Target URL', 'validator': 'validate_url'},
-                    'WORDLIST': {'required': False, 'description': 'Wordlist path', 'default': 'wordlists/directory-brute.txt', 'validator': 'validate_file_path'},
-                    'EXTENSIONS': {'required': False, 'description': 'File extensions', 'default': '.php,.html'},
-                    'EXPORT': {'required': False, 'description': 'Export report to file', 'default': 'dir_reports.txt'}
-                },
-                'helper': 'Discover hidden directories and files. Set target URL and optionally specify wordlist/extensions.'
-            },
-            'sslinspect': {
-                'name': 'SSL/TLS Inspector',
-                'description': 'Analyze website security certificates',
-                'category': 'audit',
-                'function': lambda args: ssl_inspector.run_ssl_inspector(args),
-                'options': {
-                    'TARGET': {'required': True, 'description': 'Target host:port', 'validator': 'validate_host'},
-                    'EXPORT': {'required': False, 'description': 'Export format (json/txt)', 'default': 'json', 'validator': 'validate_choice', 'choices': ['json', 'txt']}
-                },
-                'helper': 'Analyze SSL/TLS certificates of target host. Requires host:port format.'
-            },
-            'corstest': {
-                'name': 'CORS Misconfig Auditor',
-                'description': 'Identify CORS configuration issues',
-                'category': 'audit',
-                'function': lambda args: cors_scan.main(args),
-                'options': {
-                    'URL': {'required': True, 'description': 'Target URL', 'validator': 'validate_url'},
-                    'EXPORT': {'required': False, 'description': 'Export format', 'default': 'json', 'validator': 'validate_choice', 'choices': ['json', 'html', 'csv']}
-                },
-                'helper': 'Test for CORS misconfigurations. Provide target URL for testing.'
-            },
-            'smuggler': {
-                'name': 'HTTP Desync Tester',
-                'description': 'Test for HTTP request smuggling',
-                'category': 'exploit',
-                'function': lambda args: main_runner.run(args),
-                'options': {
-                    'URL': {'required': True, 'description': 'Target URL', 'validator': 'validate_url'},
-                    'PORT': {'required': False, 'description': 'Target port', 'default': 80, 'validator': 'validate_port'}
-                },
-                'helper': 'Test for HTTP request smuggling vulnerabilities. Requires URL and optionally port.'
-            },
-            'tracepulse': {
-                'name': 'Tracepulse',
-                'description': 'Trace network routes and identify issues',
-                'category': 'recon',
-                'function': lambda args: tracepulse.main(args),
-                'options': {
-                    'DESTINATION': {'required': True, 'description': 'Target host/IP', 'validator': 'validate_host'},
-                    'PROTOCOL': {'required': False, 'description': 'Protocol (icmp/tcp/udp)', 'default': 'icmp', 'validator': 'validate_choice', 'choices': ['icmp', 'tcp', 'udp']}
-                },
-                'helper': 'Trace network routes to identify network issues. Specify destination and protocol.'
-            },
-            'js-crawler': {
-                'name': 'JS Crawler',
-                'description': 'Extract endpoints from JavaScript files',
-                'category': 'recon',
-                'function': lambda args: jscrawler.main(**vars(args)),
-                'options': {
-                    'URL': {'required': True, 'description': 'Target URL', 'validator': 'validate_url'},
-                    'SELENIUM': {'required': False, 'description': 'Use Selenium', 'default': False, 'validator': 'validate_boolean'}
-                },
-                'helper': 'Extract endpoints from JavaScript files. Target URL required.'
-            },
-            'py-obfuscator': {
-                'name': 'Python Obfuscator',
-                'description': 'Obfuscate Python code for protection',
-                'category': 'utility',
-                'function': lambda args: py_obfuscator.main(args),
-                'options': {
-                    'INPUT': {'required': True, 'description': 'Input Python file', 'validator': 'validate_file_path'},
-                    'OUTPUT': {'required': False, 'description': 'Output file path'},
-                    'LEVEL': {'required': False, 'description': 'Protection level (1-3)', 'default': 2, 'validator': 'validate_integer', 'min_val': 1, 'max_val': 3}
-                },
-                'helper': 'Obfuscate Python code to protect it. Specify input/output files and protection level.'
-            },
-            'waftester': {
-                'name': 'WAF Bypass Tester',
-                'description': 'Test Web Application Firewall bypasses',
-                'category': 'exploit',
-                'function': lambda args: tui.WAFTUI().run(args),
-                'options': {
-                    'URL': {'required': True, 'description': 'Target URL', 'validator': 'validate_url'},
-                    'METHOD': {'required': False, 'description': 'HTTP method', 'default': 'GET', 'validator': 'validate_choice', 'choices': ['GET', 'POST', 'PUT', 'DELETE', 'HEAD', 'OPTIONS']}
-                },
-                'helper': 'Test WAF bypass techniques. Requires target URL and optionally HTTP method.'
-            }
-        }
+        # Load modules dynamically from central registry
+        self._load_modules_from_registry()
 
         self.command_parser = CommandParser(self.module_list)
         self.command_history = self.command_parser.history
@@ -315,6 +139,32 @@ class InteractiveCLI(cmd.Cmd):
         self.workflow_engine = WorkflowEngine(self.result_manager)
         self.threat_intelligence = ThreatIntelligence(self.result_manager)
         self.argparse_parser = create_parser()
+    
+    def _load_modules_from_registry(self):
+        """Load modules dynamically from central registry"""
+        from core.cli.module_registry import registry
+        
+        self.module_list = {}
+        for spec in registry.modules:
+            # Convert OptionSpec to interactive CLI format
+            options = {}
+            for opt in spec.options:
+                options[opt.name.upper()] = {
+                    'required': opt.required,
+                    'description': opt.help,
+                    'default': opt.default
+                }
+                if opt.choices:
+                    options[opt.name.upper()]['choices'] = opt.choices
+            
+            self.module_list[spec.name] = {
+                'name': spec.help.split(':')[0] if ':' in spec.help else spec.help,
+                'description': spec.help,
+                'category': 'scanner',  # Default category
+                'function': lambda args, runner=spec.runner: runner({k.lower(): v for k, v in vars(args).items() if k != 'command'}),
+                'options': options,
+                'helper': spec.help
+            }
         
     def _setup_history(self):
         """Setup command history"""
@@ -447,8 +297,6 @@ class InteractiveCLI(cmd.Cmd):
         for opt_name, opt_value in current_module_options.items():
             final_options[opt_name.lower()] = opt_value
 
-        final_options['command'] = self.module
-
         missing_required = []
         for opt_name, opt_info in module_info.get('options', {}).items():
             if opt_info.get('required', False) and opt_name.lower() not in final_options:
@@ -456,7 +304,7 @@ class InteractiveCLI(cmd.Cmd):
 
         if missing_required:
             self.ui_formatter.print_error_with_suggestions(
-                f"Missing required options: {', '.join(missing_required)}", 
+                f"Missing required options: {', '.join(missing_required)}",
                 [f"Set {opt} to proceed" for opt in missing_required]
             )
             return
@@ -465,6 +313,13 @@ class InteractiveCLI(cmd.Cmd):
             start_time = time.time()
             self.ui_formatter.print_module_header(module_info['name'])
             console.print(f"[dim]Module: {self.module} | Options: {len(final_options)}[/dim]\n")
+
+            # For modules that have 'command' option, ensure it has the right value
+            # The command should be 'single' or 'batch' not the module name
+            if 'command' in [opt_name.lower() for opt_name, opt_info in module_info.get('options', {}).items()]:
+                if 'command' not in final_options:
+                    # Default to 'single' if command is not set
+                    final_options['command'] = 'single'
 
             args_obj = argparse.Namespace(**final_options)
             module_func = module_info['function']
