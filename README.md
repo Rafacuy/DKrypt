@@ -6,7 +6,7 @@
 
 <p align="center">
     <img alt="Python 3.10+" src="https://img.shields.io/badge/Python-3.10+-FFD43B?style=for-the-badge&logo=python&logoColor=blue">
-    <img alt="Version 1.4.0" src="https://img.shields.io/badge/Version-1.4.0-green?style=for-the-badge">
+    <img alt="Version 1.4.2" src="https://img.shields.io/badge/Version-1.4.2-green?style=for-the-badge">
     <img alt="Status STABLE" src="https://img.shields.io/badge/Status-STABLE-brightgreen?style=for-the-badge">
     <img alt="Documentation" src="https://img.shields.io/badge/Docs-Passing-blue.svg?style=for-the-badge">
     <img alt="License GPL-3.0" src="https://img.shields.io/github/license/Rafacuy/DKrypt?color=orange&style=for-the-badge">

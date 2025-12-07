@@ -2,10 +2,10 @@
 from rich.console import Console
 from time import sleep
 from datetime import datetime
-from core.cli.menu import MenuConfig
+from core import version
 
-VERSION = MenuConfig().VERSION
-STATUS = MenuConfig().STATUS
+VERSION = version.__version__
+STATUS = version.__status__
 
 status_color = STATUS
 if status_color == "BETA": 

@@ -180,14 +180,20 @@ class OutputFormatter:
         
         self.console.print(table)
     
-    def print_suggestion_box(self, title: str, suggestions: List[Tuple[str, float]]):
+    def print_suggestion_box(self, title: str, suggestions: List):
+        """Print suggestion box - handles both tuples (name, score) and strings"""
         if not suggestions:
             return
         
         content = "[bold]Did you mean?[/bold]\n"
-        for i, (suggestion, score) in enumerate(suggestions[:5], 1):
-            confidence = int(score * 100)
-            content += f"{i}. [cyan]{suggestion}[/cyan] ({confidence}%)\n"
+        for i, item in enumerate(suggestions[:5], 1):
+            if isinstance(item, tuple) and len(item) == 2:
+                suggestion, score = item
+                confidence = int(score * 100)
+                content += f"{i}. [cyan]{suggestion}[/cyan] ({confidence}%)\n"
+            else:
+                suggestion = str(item)
+                content += f"{i}. [cyan]{suggestion}[/cyan]\n"
         
         panel = Panel(content.strip(), title=title, style="yellow")
         self.console.print(panel)

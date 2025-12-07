@@ -5,7 +5,7 @@ import random
 from rich.console import Console
 import colorama
 from colorama import Fore,Style,init
-from core.cli.menu import MenuConfig
+from core.version import __version__, __status__
 from core.ui.banner import get_banner_art
 from datetime import datetime
 
@@ -34,8 +34,8 @@ def sanitize_filename(name: str) -> str:
   
 def header_banner(tool_name: str):
     """Display a professional header banner for DKrypt tools"""
-    VERSION = MenuConfig().VERSION
-    STATUS = MenuConfig().STATUS
+    VERSION = __version__
+    STATUS = __status__
     status_color = "red" if STATUS == "BETA" else "green"
     
     spaced_name = "".join(tool_name.upper())

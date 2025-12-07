@@ -14,11 +14,12 @@ from core.config import config
 from core.diagnostics import run_diagnostics
 from core.utils.help import show_help
 from core.ui.banner import display_header
+from core import version
 
 console = Console()
 
-__version__ = "1.4.0"
-__status__ = "STABLE"
+__version__ = version.__version__
+__status__ = version.__status__
 
 app = typer.Typer(
     name="dkrypt",

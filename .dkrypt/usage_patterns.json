@@ -1,0 +1,36 @@
+{
+  "module_usage": {
+    "sqli": 5,
+    "xss": 2,
+    "portscanner": 3,
+    "subdomain": 6
+  },
+  "command_sequences": [],
+  "option_values": {
+    "xss:URL": [
+      "http://testphp.vulnweb.com"
+    ],
+    "portscanner:COMMAND": [
+      "single"
+    ],
+    "portscanner:TARGET": [
+      "nmap.com"
+    ],
+    "subdomain:COMMAND": [
+      "single"
+    ],
+    "subdomain:TARGET": [
+      "http://testphp.vulnweb.com"
+    ],
+    "subdomain:API_ONLY": [
+      "True"
+    ],
+    "subdomain:OUTPUT_FORMATS": [
+      "json,txt"
+    ],
+    "sqli:URL": [
+      "http://testphp.vulnweb.com"
+    ]
+  },
+  "last_updated": 1765086357.6091056
+}

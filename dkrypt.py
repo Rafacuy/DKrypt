@@ -7,11 +7,12 @@ Command-line entry point with proper error handling and logging
 import sys
 from rich.console import Console
 from dkrypt_main import main as typer_main
+from core import version
 
 console = Console()
 
-__version__ = "1.4.0"
-__status__ = "STABLE"
+__version__ = version.__version__
+__status__ = version.__status__
 
 
 def main():

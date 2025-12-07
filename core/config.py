@@ -22,7 +22,7 @@ class ConfigManager:
     DEFAULT_CONFIG = {
         "tool": {
             "name": "DKrypt",
-            "version": "1.4.0",
+            "version": "1.4.2",
             "timeout": 30,
             "max_retries": 3,
             "verbose": False,

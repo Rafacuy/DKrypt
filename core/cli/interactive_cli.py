@@ -19,7 +19,10 @@ from rich.markdown import Markdown
 from core.ui.banner import display_header
 from core.cli.parsers import create_parser
 from core.utils.help import HelpSystem
-from core.cli.command_engine import CommandParser, CommandHistory, CommandValidator, CommandSuggester
+from core.cli.command_engine import CommandParser, CommandHistory, CommandValidator
+from core.cli.suggestor import EnhancedSuggester
+from core.cli.completer import SmartCompleter, setup_readline_completion
+from core.error_reporter import ErrorLogger, prompt_error_report
 from core.ui.ui_components import OutputFormatter, ProgressTracker, StatusIndicator, InteractivePrompt, ContextMenu
 from core.result_manager import ResultManager, WorkflowEngine, ThreatIntelligence
 from modules import (
@@ -127,11 +130,15 @@ class InteractiveCLI(cmd.Cmd):
 
         self._setup_history()
 
-        readline.set_completer_delims(' \t\n;')
-        readline.parse_and_bind("tab: complete")
-
         # Load modules dynamically from central registry
         self._load_modules_from_registry()
+
+        # Initialize enhanced suggester and completer
+        self.suggester = EnhancedSuggester(self.module_list)
+        self.completer = SmartCompleter(self.suggester, self.module_list)
+        
+        # Setup readline with smart completion
+        setup_readline_completion(self.completer)
 
         self.command_parser = CommandParser(self.module_list)
         self.command_history = self.command_parser.history
@@ -195,8 +202,13 @@ class InteractiveCLI(cmd.Cmd):
                 self.options[self.module] = {}
             self.ui_formatter.print_status("success", f"Using module: {self.module_list[module_name]['name']}")
             self.command_history.add_entry(module_name, {"action": "use"})
+            
+            # Update completer context
+            self.completer.set_context(module=module_name, options=self.options.get(module_name, {}))
+            # Record usage pattern
+            self.suggester.record_usage(module=module_name)
         else:
-            suggestions = self.command_parser.suggester.suggest_module(module_name)
+            suggestions = self.suggester.suggest_module(module_name)
             self.ui_formatter.print_status("error", f"Module '{module_name}' not found.")
             if suggestions:
                 self.ui_formatter.print_suggestion_box("Did you mean?", suggestions)
@@ -265,6 +277,10 @@ class InteractiveCLI(cmd.Cmd):
         else:
             self.options[self.module][option_upper] = value
             self.ui_formatter.print_status("success", f"{option_upper} => {value}")
+            
+            # Update completer context and record pattern
+            self.completer.set_context(module=self.module, options=self.options[self.module])
+            self.suggester.record_usage(module=self.module, option=option_upper, value=value)
     
     def do_unset(self, arg):
         """Unset an option: unset URL"""
@@ -333,11 +349,20 @@ class InteractiveCLI(cmd.Cmd):
             elapsed = time.time() - start_time
             self.ui_formatter.print_status("error", f"Error in {self.module}: {str(e)}")
             self.command_history.update_status(self.module, "error", str(e), elapsed)
+            
+            # Prompt for error reporting if blocking error
+            prompt_error_report(e, module=self.module, console=console)
+            
+            # Prompt for error reporting if blocking error
+            prompt_error_report(e, module=self.module, console=console)
     
     def do_back(self, arg):
         self.module = None
         self.prompt = '(dkrypt) '
         self.ui_formatter.print_status("success", "Returned to main context.")
+        
+        # Update completer context
+        self.completer.set_context(module=None, options={})
         
     def do_history(self, arg):
         recent = self.command_history.get_recent(10)
@@ -575,7 +600,7 @@ class InteractiveCLI(cmd.Cmd):
                 matches.append((module_key, module_info))
         
         if not matches:
-            suggestions = self.command_parser.suggester.suggest_module(term)
+            suggestions = self.suggester.suggest_module(term)
             self.ui_formatter.print_status("warning", f"No modules found matching '{term}'.")
             if suggestions:
                 self.ui_formatter.print_suggestion_box("Similar modules", suggestions)
@@ -657,6 +682,7 @@ class InteractiveCLI(cmd.Cmd):
                 ("shortcut <create|list|run>", "Manage command shortcuts"),
                 ("results <list|show|analyze>", "View and analyze scan results"),
                 ("workflow <create|list|run|delete>", "Manage automation workflows"),
+                ("errors <list|view|clear>", "Manage error logs"),
                 ("info [module]", "Show module information"),
                 ("exit/quit/q", "Exit the application"),
             ]
@@ -675,6 +701,47 @@ class InteractiveCLI(cmd.Cmd):
                 self._show_module_info(arg)
             else:
                 self.ui_formatter.print_status("error", f"Unknown module: {arg}")
+    
+    def do_errors(self, arg):
+        """Manage error logs: errors list|view <hash>|clear"""
+        from core.error_reporter import ErrorLogger
+        logger = ErrorLogger()
+        
+        parts = arg.split()
+        action = parts[0].lower() if parts else "list"
+        
+        if action == "list":
+            logs = logger.list_errors()
+            if not logs:
+                self.ui_formatter.print_status("info", "No error logs found")
+                return
+            
+            table = Table(title="Recent Error Logs")
+            table.add_column("Hash", style="cyan")
+            table.add_column("File", style="yellow")
+            table.add_column("Time", style="green")
+            
+            for log in logs:
+                hash_id = log.stem.replace("error_", "")
+                mtime = datetime.fromtimestamp(log.stat().st_mtime)
+                table.add_row(hash_id, log.name, mtime.strftime("%Y-%m-%d %H:%M"))
+            
+            console.print(table)
+            console.print("\n[dim]Use 'errors view <hash>' to see details[/dim]")
+        
+        elif action == "view" and len(parts) > 1:
+            content = logger.view_error(parts[1])
+            if content:
+                console.print(Panel(content, title=f"Error {parts[1]}", border_style="red"))
+            else:
+                self.ui_formatter.print_status("error", f"Error log '{parts[1]}' not found")
+        
+        elif action == "clear":
+            logger.clear_old_logs(30)
+            self.ui_formatter.print_status("success", "Cleared logs older than 30 days")
+        
+        else:
+            self.ui_formatter.print_status("error", "Usage: errors list|view <hash>|clear")
     
     def do_exit(self, arg):
         """Exit the application"""
@@ -698,30 +765,32 @@ class InteractiveCLI(cmd.Cmd):
         if cmd == 'EOF':
             return self.do_exit('')
 
-        suggestions = self.command_parser.suggester.suggest_command(cmd)
+        suggestions = self.suggester.suggest_command(cmd)
         self.ui_formatter.print_status("error", f"Unknown command: {cmd}")
         if suggestions:
             self.ui_formatter.print_suggestion_box("Did you mean?", suggestions)
 
     def complete_set(self, text, line, begidx, endidx):
         """Tab completion for the set command with improved context awareness"""
-        # Extract current module context
         if self.module:
-            # Use the improved suggester to get options for the current module
-            suggestions = self.command_parser.suggester.suggest_options(self.module, text)
-            return suggestions
+            parts = line.split()
+            if len(parts) <= 2:
+                return self.suggester.suggest_options(self.module, text)
+            elif len(parts) >= 2:
+                option = parts[1].upper()
+                return self.suggester.suggest_option_values(self.module, option, text)
         return []
 
     def complete_unset(self, text, line, begidx, endidx):
         """Tab completion for the unset command"""
-        # Return currently set options
-        return [opt for opt in self.options.keys() if opt.startswith(text.upper())]
+        if self.module and self.module in self.options:
+            return [opt for opt in self.options[self.module].keys() if opt.startswith(text.upper())]
+        return []
 
     def complete_use(self, text, line, begidx, endidx):
         """Tab completion for the use command with fuzzy matching"""
-        # Use the improved suggester to get module suggestions
-        suggestions = self.command_parser.suggester.suggest_module(text, threshold=0.3)
-        return [suggestion[0] for suggestion in suggestions]  # Return just the module names
+        suggestions = self.suggester.suggest_module(text, threshold=0.3)
+        return [s[0] if isinstance(s, tuple) else s for s in suggestions]
 
     def complete_show(self, text, line, begidx, endidx):
         """Tab completion for the show command"""
@@ -730,9 +799,8 @@ class InteractiveCLI(cmd.Cmd):
 
     def complete_search(self, text, line, begidx, endidx):
         """Tab completion for the search command"""
-        # Use the suggester to find matching modules
-        suggestions = self.command_parser.suggester.suggest_module(text, threshold=0.3)
-        return [suggestion[0] for suggestion in suggestions]
+        suggestions = self.suggester.suggest_module(text, threshold=0.3)
+        return [s[0] if isinstance(s, tuple) else s for s in suggestions]
 
 
 def run_interactive_cli():
@@ -744,7 +812,11 @@ def run_interactive_cli():
         interactive_cli.cmdloop()
     except KeyboardInterrupt:
         console.print("\n[yellow]Exiting...[/yellow]")
+        interactive_cli.suggester.save_patterns()
         sys.exit(0)
     except Exception as e:
         console.print(f"[red]Error in interactive CLI: {str(e)}[/red]")
+        prompt_error_report(e, module="interactive_cli", console=console)
         sys.exit(1)
+    finally:
+        interactive_cli.suggester.save_patterns()
