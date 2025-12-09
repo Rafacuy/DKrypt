@@ -27,6 +27,7 @@ ENV/
 
 # Reports & Results
 reports/
+.dkrypt/
 .dkrypt/results/
 .dkrypt/outputs/
 .dkrypt/cache/

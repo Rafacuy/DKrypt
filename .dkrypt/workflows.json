@@ -1,9 +1,0 @@
-{
-  "test": [
-    {
-      "module": "sqli",
-      "options": {}
-    }
-  ]
-}
-
