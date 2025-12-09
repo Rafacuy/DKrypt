@@ -4,9 +4,9 @@ DKrypt Enhanced Auto-Completion Engine
 Intelligent tab completion with context awareness and pattern learning
 """
 
-import readline
 from typing import Dict, List, Optional, Callable, Any
 from dataclasses import dataclass
+from prompt_toolkit.document import Document
 
 
 @dataclass
@@ -69,59 +69,43 @@ class SmartCompleter:
         if options is not None:
             self.current_options = options
     
-    def _parse_line(self, line: str, begidx: int, endidx: int) -> CompletionContext:
+    def _parse_line(self, document: Document) -> CompletionContext:
         """Parse the current line into completion context"""
-        ctx = CompletionContext(line=line, cursor_pos=endidx)
+        line = document.text_before_cursor
+        ctx = CompletionContext(line=line, cursor_pos=document.cursor_position)
         
-        parts = line[:endidx].split()
-        text = line[begidx:endidx] if begidx < endidx else ""
+        parts = line.split()
         
         if not parts:
-            ctx.partial = text
+            ctx.partial = document.get_word_before_cursor()
             return ctx
         
         ctx.command = parts[0].lower()
-        ctx.partial = text
+        ctx.partial = document.get_word_before_cursor(WORD=True)
         ctx.module = self.current_module or ""
         
         if len(parts) > 1:
-            ctx.subcommand = parts[1]
+            if line.endswith(' '):
+                ctx.subcommand = "" # we are starting a new word
+            else:
+                ctx.subcommand = parts[-1]
         
         return ctx
     
-    def complete(self, text: str, state: int) -> Optional[str]:
-        """
-        Main completion function for readline
-        
-        Args:
-            text: Current word being completed
-            state: Completion state (0 for first call, incrementing)
-            
-        Returns:
-            Next completion or None
-        """
-        if state == 0:
-            line = readline.get_line_buffer()
-            begidx = readline.get_begidx()
-            endidx = readline.get_endidx()
-            
-            self._completions = self._get_completions(line, begidx, endidx, text)
-        
-        try:
-            return self._completions[state]
-        except IndexError:
-            return None
-    
-    def _get_completions(self, line: str, begidx: int, endidx: int, 
-                         text: str) -> List[str]:
+    def get_completions(self, document: Document) -> List[str]:
         """Get completions based on current context"""
-        ctx = self._parse_line(line, begidx, endidx)
+        ctx = self._parse_line(document)
         
-        if begidx == 0 or not ctx.command:
-            return self._complete_command(text)
-        
-        if ctx.command in self._command_completers:
-            return self._command_completers[ctx.command](ctx, text)
+        if document.text.isspace() or not document.text:
+            return self._complete_command("")
+
+        parts = document.text_before_cursor.split()
+        if len(parts) == 0 or (len(parts) == 1 and not document.text.endswith(" ")):
+             return self._complete_command(document.get_word_before_cursor())
+
+        command = parts[0]
+        if command in self._command_completers:
+            return self._command_completers[command](ctx, document.get_word_before_cursor(WORD=True))
         
         return []
     
@@ -153,9 +137,11 @@ class SmartCompleter:
         
         parts = ctx.line.split()
         
-        if len(parts) <= 2:
-            return self.suggestor.suggest_options(self.current_module, text)
+        # If we are typing the option name
+        if len(parts) <= 2 and not ctx.line.endswith(' '):
+             return self.suggestor.suggest_options(self.current_module, text)
         
+        # if we have typed the option name and a space, suggest values
         if len(parts) >= 2:
             option = parts[1].upper()
             return self.suggestor.suggest_option_values(
@@ -265,17 +251,3 @@ class SmartCompleter:
         
         return []
 
-
-def setup_readline_completion(completer: SmartCompleter) -> None:
-    """Configure readline with the smart completer"""
-    readline.set_completer(completer.complete)
-    readline.set_completer_delims(' \t\n;')
-    readline.parse_and_bind("tab: complete")
-    
-    try:
-        if hasattr(readline, 'backend') and 'libedit' in readline.backend:
-            readline.parse_and_bind("bind ^I rl_complete")
-        else:
-            readline.parse_and_bind("tab: complete")
-    except AttributeError:
-        readline.parse_and_bind("tab: complete")

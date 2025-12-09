@@ -1,6 +1,7 @@
 # Core Framework
 typer[all]
 rich
+prompt-toolkit
 
 # HTTP & Network
 requests
