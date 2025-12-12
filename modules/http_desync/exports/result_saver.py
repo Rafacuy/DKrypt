@@ -6,7 +6,6 @@ import sys
 from pathlib import Path
 from typing import List, Dict, Any
 from rich.console import Console
-from rich.prompt import Prompt
 sys.path.append("..")
 from modules.http_desync.engine.payload_generator import TestResult
 
@@ -37,24 +36,22 @@ class ResultSaver:
 
             timestamp = time.strftime("%Y%m%d_%H%M%S")
 
-            # Ask for format
-            format_choice = Prompt.ask(
-                "[bold cyan]Choose output format[/bold cyan]",
-                choices=["json", "csv", "txt"],
-                default="json"
-            )
+            # Save in all formats for CLI mode
+            for format_choice in ["json", "txt", "csv"]:  # Save all formats
+                filename = reports_dir / f"desync_scan_results_{timestamp}.{format_choice}"
 
-            filename = reports_dir / f"desync_scan_results_{timestamp}.{format_choice}"
+                if format_choice == "txt":
+                    ResultSaver._save_txt_file(filename, results, target_url, port, target_info)
+                elif format_choice == "json":
+                    ResultSaver._save_json_file(filename, results, target_url, port, target_info)
+                elif format_choice == "csv":
+                    ResultSaver._save_csv_file(filename, results)
 
-            if format_choice == "txt":
-                ResultSaver._save_txt_file(filename, results, target_url, port, target_info)
-            elif format_choice == "json":
-                ResultSaver._save_json_file(filename, results, target_url, port, target_info)
-            elif format_choice == "csv":
-                ResultSaver._save_csv_file(filename, results)
+                console.print(f"[green]✅ Results saved to: {filename}[/green]")
 
-            console.print(f"[green]✅ Results saved to: {filename}[/green]")
-            return filename
+            # Return the main JSON filename as reference
+            main_filename = reports_dir / f"desync_scan_results_{timestamp}.json"
+            return main_filename
 
         except Exception as e:
             console.print(f"[red]❌ Failed to save results: {e}[/red]")

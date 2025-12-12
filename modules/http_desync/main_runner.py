@@ -6,8 +6,6 @@ from enum import Enum
 import os
 
 from rich.console import Console
-from rich.prompt import Prompt, IntPrompt, Confirm
-from rich.panel import Panel
 
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
@@ -44,53 +42,40 @@ def parse_headers(header_str: str) -> Dict[str, str]:
 
 def run(args=None):
     """
-    Main execution function with enhanced user interface and error handling.
+    Main execution function with CLI-focused interface and error handling.
     """
     console = Console()
-    
-    try:
-        clear_console()
-        header_banner(tool_name="HTTP Desync")
 
+    try:
         if args:
             target_url = args.url
-            port = args.port
-            headers = args.headers
+            port = args.port if hasattr(args, 'port') else None
+            headers = args.headers if hasattr(args, 'headers') else None
         else:
-            # Target URL input with validation
-            while True:
-                target_url = Prompt.ask(
-                    "[bold cyan]Enter target URL[/bold cyan]",
-                    default="https://example.com"
-                ).strip()
+            # In non-interactive mode, we should have URL passed via args
+            console.print("[red]Error: URL must be provided via arguments in CLI mode[/red]")
+            sys.exit(1)
 
-                if not target_url:
-                    console.print("[red]URL cannot be empty[/red]")
-                    continue
+        # Validate inputs
+        if not target_url:
+            console.print("[red]Error: Target URL is required[/red]")
+            sys.exit(1)
 
-                if not (target_url.startswith("http://") or target_url.startswith("https://")):
-                    console.print("[red]URL must start with http:// or https://[/red]")
-                    continue
+        if not (target_url.startswith("http://") or target_url.startswith("https://")):
+            target_url = "https://" + target_url
 
-                break
+        if not port:
+            port = 443 if target_url.startswith("https://") else 80
 
-            # Port input with smart defaults
-            default_port = 443 if target_url.startswith("https://") else 80
-            port = IntPrompt.ask(
-                "[bold cyan]Enter port[/bold cyan]",
-                default=default_port,
-                show_default=True
-            )
+        if isinstance(headers, str):
+            headers = parse_headers(headers)
 
-            # Custom headers (optional)
-            headers = Prompt.ask(
-                "[bold cyan]Custom headers[/bold cyan] (optional, format: key1:val1,key2:val2)",
-                default="",
-                show_default=False
-            )
+        # Display settings
+        console.print(f"[bold]Target URL:[/bold] {target_url}")
+        console.print(f"[bold]Target Port:[/bold] {port}")
+        if headers:
+            console.print(f"[bold]Custom Headers:[/bold] {headers}")
 
-        # Advanced options
-        console.print("\n[bold]Advanced Options:[/bold]")
         if RANDOMIZER_AVAILABLE:
             console.print("[green]✅ Stealth headers: Available[/green]")
         else:

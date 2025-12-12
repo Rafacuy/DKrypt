@@ -12,12 +12,9 @@ from pathlib import Path
 from typing import Dict, List, Any, Optional, Tuple, Union
 
 from rich.console import Console
-from rich.prompt import Prompt, IntPrompt, Confirm
 from rich.table import Table
 from rich.panel import Panel
-from rich.live import Live
 from rich.progress import Progress, SpinnerColumn, BarColumn, TextColumn
-from rich.layout import Layout
 from rich.text import Text
 
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
@@ -40,7 +37,7 @@ except ImportError:
     print("Warning: randomizer.py not found. Using basic headers.")
 
 try:
-    from core.utils import clear_console
+    from core.utils import clear_console, header_banner
 except ImportError:
     def clear_console():
         import os
@@ -93,21 +90,7 @@ class RequestSmuggler:
             except ValueError:
                 console.print("[bold red]Invalid header format. Using default headers.[/bold red]")
         return headers
-
-    def display_header(self):
-        """Display application header and warnings"""
-        header_text = Text("HTTP Desync Tester", justify="center")
-        console.print(Panel(header_text, style="bold magenta", border_style="magenta"))
-        console.print(Panel(
-            "[bold yellow]⚠️ WARNING ⚠️[/bold yellow]\n"
-            "This tool performs security testing that may:\n"
-            "• Trigger security alerts and monitoring systems\n"
-            "• Cause service disruption or instability\n"
-            "• Violate terms of service or legal agreements\n\n"
-            "[bold red]Only use on systems you own or have explicit written permission to test![/bold red]",
-            border_style="red"
-        ))
-
+    
     def validate_target(self) -> bool:
         """Validate target before testing"""
         console.print("\n[bold cyan]Step 1: Target Validation[/bold cyan]")
@@ -603,12 +586,7 @@ class RequestSmuggler:
         Execute the complete scanning workflow with all enhanced features.
         """
         clear_console()
-        self.display_header()
-
-        # Get user confirmation before proceeding
-        if not Confirm.ask("\n[bold]Do you have explicit authorization to test this target?[/bold]"):
-            console.print("[red]Exiting - Authorization required for security testing[/red]")
-            sys.exit(0)
+        header_banner(tool_name="Request Smuggler")
 
         try:
             # Step 1: Validate target
@@ -627,26 +605,23 @@ class RequestSmuggler:
                 console.print("[red]❌ No payloads generated. Exiting.[/red]")
                 sys.exit(1)
 
-            # Step 4: Execute tests
-            max_threads = IntPrompt.ask(
-                "[cyan]Maximum concurrent threads[/cyan] (recommended: 3-5 for stability)",
-                default=3,
-                show_default=True
-            )
+            # Step 4: Execute tests with default thread count for CLI mode
+            max_threads = 3  # Default for CLI mode, can be configured via args
+            console.print(f"[cyan]Using {max_threads} concurrent threads for testing[/cyan]")
 
             self.run_concurrent_tests(payloads, max_threads)
 
             # Step 5: Display results
             self.display_results()
 
-            # Ask if user wants to save results
-            if Confirm.ask("\n[bold]Save results to file?[/bold]"):
-                ResultSaver.save_results_to_file(
-                    self.results, 
-                    self.target_url, 
-                    self.port, 
-                    self.target_info
-                )
+            # Automatically save results in CLI mode
+            console.print("\n[bold]Saving results to file...[/bold]")
+            ResultSaver.save_results_to_file(
+                self.results,
+                self.target_url,
+                self.port,
+                self.target_info
+            )
 
         except KeyboardInterrupt:
             console.print("\n[yellow]⚠️ Scan interrupted by user[/yellow]")

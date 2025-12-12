@@ -23,13 +23,6 @@ class MenuOption:
 
 class MenuConfig:
     """Core configuration for the menu system"""
-
-    # Application metadata
-    APP_NAME = "DKrypt"
-    VERSION = "1.4.0"
-    STATUS = "STABLE"
-    COPYRIGHT = "© 2025 DKrypt Security"
-
     MODULES_LIST = [
         {"name": "sqli", "display": "SQLI Scanner", "desc": "Detect SQL injection vulnerabilities"},
         {"name": "xss", "display": "XSS Scanner", "desc": "Detect Cross-Site Scripting vulnerabilities"},

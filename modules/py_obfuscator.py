@@ -54,6 +54,7 @@ class PyObfuscator:
         self.import_mapping = {}
         self.string_pool = []
         self.code_chunks = []
+        self.protection_level = 2  # Default protection level
     
     def get_user_input(self):
         """user input with validation"""
@@ -107,9 +108,13 @@ class PyObfuscator:
         print("  2. Standard (Balanced speed and protection)")
         print("  3. Maximum (Slow, highest protection)")
         print(f"{Fore.GREEN}[?]{Style.RESET_ALL} Select protection level [2]: ", end="")
-        
+
         level_input = input().strip()
-        self.protection_level = int(level_input) if level_input.isdigit() and 1 <= int(level_input) <= 3 else 2
+        try:
+            level_num = int(level_input) if level_input.strip() else 2
+            self.protection_level = level_num if 1 <= level_num <= 3 else 2
+        except (ValueError, TypeError):
+            self.protection_level = 2  # Default to standard if invalid input
         
         return True
     
@@ -476,33 +481,80 @@ if __name__ == '__main__':
             print(f"\n{Fore.RED}[-] Obfuscation failed!{Style.RESET_ALL}")
 
 
-def main(args=None):
-    """Entry point"""
+def main(*args, **kwargs):
+    """Entry point - supports both new args-object style and legacy positional args style"""
     if not COLORAMA_AVAILABLE:
         print("Notice: Install 'colorama' for enhanced display (pip install colorama)")
         print("Continuing without colors...\n")
-    
-    try:
-        obfuscator = PyObfuscator()
-        if args:
+
+    # Define helper functions first
+    def run_with_args(args):
+        try:
+            obfuscator = PyObfuscator()
             obfuscator.input_file = args.input
             obfuscator.output_file = args.output
             if args.key:
                 obfuscator.encryption_key = obfuscator.derive_key(args.key.encode(), obfuscator.salt, obfuscator.iterations)
             else:
                 obfuscator.encryption_key = os.urandom(32)
-            obfuscator.protection_level = args.level
+            # Ensure protection_level is an integer to prevent type errors
+            try:
+                obfuscator.protection_level = int(args.level) if args.level is not None else 2
+            except (ValueError, TypeError):
+                print(f"{Fore.RED}Error: Protection level must be a number between 1 and 3{Style.RESET_ALL}")
+                return
             if obfuscator.process_file():
                 obfuscator.display_results()
             else:
                 print(f"\n{Fore.RED}[-] Obfuscation failed!{Style.RESET_ALL}")
-        else:
+        except KeyboardInterrupt:
+            print(f"\n{Fore.YELLOW}[!] Operation cancelled by user{Style.RESET_ALL}")
+            time.sleep(2)
+        except Exception as e:
+            print(f"\n{Fore.RED}[!] Unexpected error: {e}{Style.RESET_ALL}")
+            time.sleep(5)
+
+    def run_with_legacy_args(input_file=None, output_file=None, level=None, rename_vars=None, rename_funcs=None, flow_obfuscation=None):
+        try:
+            obfuscator = PyObfuscator()
+            obfuscator.input_file = input_file
+            obfuscator.output_file = output_file
+            obfuscator.encryption_key = os.urandom(32)  # Default for legacy
+            # Ensure protection_level is an integer to prevent type errors
+            try:
+                obfuscator.protection_level = int(level) if level is not None else 2
+            except (ValueError, TypeError):
+                print(f"{Fore.RED}Error: Protection level must be a number between 1 and 3{Style.RESET_ALL}")
+                return
+            if obfuscator.process_file():
+                obfuscator.display_results()
+            else:
+                print(f"\n{Fore.RED}[-] Obfuscation failed!{Style.RESET_ALL}")
+        except KeyboardInterrupt:
+            print(f"\n{Fore.YELLOW}[!] Operation cancelled by user{Style.RESET_ALL}")
+            time.sleep(2)
+        except Exception as e:
+            print(f"\n{Fore.RED}[!] Unexpected error: {e}{Style.RESET_ALL}")
+            time.sleep(5)
+
+    def run_interactive():
+        try:
+            obfuscator = PyObfuscator()
             obfuscator.run()
-    except KeyboardInterrupt:
-        print(f"\n{Fore.YELLOW}[!] Operation cancelled by user{Style.RESET_ALL}")
-        time.sleep(2)
-        return  # Return to caller instead of calling dkrypt_m()
-    except Exception as e:
-        print(f"\n{Fore.RED}[!] Unexpected error: {e}{Style.RESET_ALL}")
-        time.sleep(5)
-        return  # Return to caller instead of calling dkrypt_m()
+        except KeyboardInterrupt:
+            print(f"\n{Fore.YELLOW}[!] Operation cancelled by user{Style.RESET_ALL}")
+            time.sleep(2)
+        except Exception as e:
+            print(f"\n{Fore.RED}[!] Unexpected error: {e}{Style.RESET_ALL}")
+            time.sleep(5)
+
+    # Handle both the new args-object style and legacy style
+    if args and (hasattr(args[0], 'input') or len(args) > 1):
+        # New style: args object passed as first argument or multiple args suggest legacy style
+        if hasattr(args[0], 'input'):  # New args object style
+            arg_obj = args[0]
+            run_with_args(arg_obj)
+        else:  # Legacy style with positional arguments: input, output, level, ...
+            run_with_legacy_args(*args)
+    else:  # Interactive mode when no args
+        run_interactive()

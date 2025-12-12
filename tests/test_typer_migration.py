@@ -118,13 +118,13 @@ class TestTyperMigration(unittest.TestCase):
         """Test Tracepulse command is registered"""
         result = self.runner.invoke(app, ["tracepulse", "--help"])
         self.assertEqual(result.exit_code, 0)
-        self.assertIn("Tracepulse", result.stdout)
+        self.assertIn("Traceroute", result.stdout)
 
     def test_jscrawler_command_exists(self):
         """Test JS Crawler command is registered"""
         result = self.runner.invoke(app, ["js-crawler", "--help"])
         self.assertEqual(result.exit_code, 0)
-        self.assertIn("JS", result.stdout)
+        self.assertIn("JavaScript", result.stdout)
 
     def test_pyobfuscator_command_exists(self):
         """Test Python Obfuscator command is registered"""
@@ -270,6 +270,74 @@ class TestTyperCommandIntegration(unittest.TestCase):
         ])
         # Should not fail on JSON parsing
         self.assertNotIn("json", result.stdout.lower())
+
+    @patch('modules.http_desync.main_runner.run')
+    def test_smuggler_command_argument_passing(self, mock_run):
+        """Test that the smuggler command correctly passes a single args object."""
+        result = self.runner.invoke(app, [
+            "smuggler",
+            "--url", "http://example.com",
+            "--port", "8080",
+            "--method", "POST",
+            "--verbose"
+        ])
+        
+        self.assertEqual(result.exit_code, 0, f"CLI command failed: {result.stdout}")
+        
+        # Verify that the underlying runner was called correctly
+        mock_run.assert_called_once()
+        
+        # Check that it was called with a single object
+        args, kwargs = mock_run.call_args
+        self.assertEqual(len(args), 1)
+        self.assertEqual(len(kwargs), 0)
+        
+        # Inspect the passed object
+        call_arg = args[0]
+        self.assertTrue(hasattr(call_arg, 'url'))
+        self.assertTrue(hasattr(call_arg, 'port'))
+        self.assertTrue(hasattr(call_arg, 'method'))
+        self.assertTrue(hasattr(call_arg, 'verbose'))
+        
+        # Verify the values
+        self.assertEqual(call_arg.url, "http://example.com")
+        self.assertEqual(call_arg.port, 8080)
+        self.assertEqual(call_arg.method, "POST")
+        self.assertEqual(call_arg.verbose, True)
+
+    @patch('modules.tracepulse.main')
+    def test_tracepulse_command_argument_passing(self, mock_main):
+        """Test that the tracepulse command correctly passes a single args object."""
+        result = self.runner.invoke(app, [
+            "tracepulse",
+            "--destination", "8.8.8.8",
+            "--protocol", "udp",
+            "--max-hops", "25",
+            "--port", "53"
+        ])
+        
+        self.assertEqual(result.exit_code, 0, f"CLI command failed: {result.stdout}")
+        
+        # Verify that the underlying runner was called correctly
+        mock_main.assert_called_once()
+        
+        # Check that it was called with a single object
+        args, kwargs = mock_main.call_args
+        self.assertEqual(len(args), 1)
+        self.assertEqual(len(kwargs), 0)
+        
+        # Inspect the passed object
+        call_arg = args[0]
+        self.assertTrue(hasattr(call_arg, 'destination'))
+        self.assertTrue(hasattr(call_arg, 'protocol'))
+        self.assertTrue(hasattr(call_arg, 'max_hops'))
+        self.assertTrue(hasattr(call_arg, 'port'))
+        
+        # Verify the values
+        self.assertEqual(call_arg.destination, "8.8.8.8")
+        self.assertEqual(call_arg.protocol, "udp")
+        self.assertEqual(call_arg.max_hops, 25)
+        self.assertEqual(call_arg.port, 53)
 
 
 class TestTyperErrorHandling(unittest.TestCase):

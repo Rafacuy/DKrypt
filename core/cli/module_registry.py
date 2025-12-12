@@ -285,21 +285,24 @@ def run_portscanner(values: Dict[str, Any]) -> None:
 def run_waftester(values: Dict[str, Any]) -> None:
     _log_start("WAF Tester", f"Running WAF tester on {values['url']}")
 
-    class Args:
-        def __init__(self) -> None:
-            self.url = values["url"]
-            self.method = values["method"]
-            self.packs = values["packs"]
-            self.custom_headers = values["custom_headers"]
-            self.concurrency = values["concurrency"]
-            self.timeout = values["timeout"]
-            self.jitter = values["jitter"]
-            self.verify_tls = values["verify_tls"]
-            self.profile = values["profile"]
-            self.export = values["export"]
+    import asyncio
+    from modules.waf_bypass import tui
 
-    app_waf = tui.WAFTUI()
-    app_waf.run(Args())
+    # Create a new event loop in a separate thread to avoid asyncio conflicts
+    def run_waftester_async():
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        try:
+            app_waf = tui.WAFTUI()
+            # Use the new interactive CLI method which has better helper functionality
+            app_waf.run_interactive_cli(values=values)
+        finally:
+            loop.close()
+
+    import threading
+    thread = threading.Thread(target=run_waftester_async)
+    thread.start()
+    thread.join()
 
 
 def run_subdomain(values: Dict[str, Any]) -> None:
@@ -395,14 +398,35 @@ def run_corstest(values: Dict[str, Any]) -> None:
 
 def run_smuggler(values: Dict[str, Any]) -> None:
     _log_start("HTTP Desync Attack Tester", f"Running HTTP desync test on {values['url']}")
-    main_runner.run(values["url"], values["port"], values["method"], values["verbose"])
+
+    # Create an args object that matches what the smuggler module expects
+    class Args:
+        def __init__(self):
+            self.url = values["url"]
+            self.port = values["port"]
+            self.headers = values.get("headers", "")  # Adding the headers parameter that might be expected
+
+    main_runner.run(Args())
 
 
 def run_tracepulse(values: Dict[str, Any]) -> None:
     _log_start("Tracepulse", f"Running tracepulse on {values['destination']}")
-    tracepulse.main(
-        values["destination"], values["protocol"], values["max_hops"], values["port"]
-    )
+
+    # Create an args object that matches what the tracepulse module expects
+    class Args:
+        def __init__(self):
+            self.destination = values["destination"]
+            self.protocol = values["protocol"]
+            self.max_hops = values["max_hops"]
+            self.port = values["port"]
+            # Adding other potential parameters that the tracepulse module might expect
+            self.timeout = values.get("timeout", 2)
+            self.probe_delay = values.get("probe_delay", 0.1)
+            self.save = values.get("save", False)
+            self.output = values.get("output", "results.json")
+            self.allow_private = values.get("allow_private", False)
+
+    tracepulse.main(Args())
 
 
 def run_jscrawler(values: Dict[str, Any]) -> None:
@@ -419,14 +443,24 @@ def run_jscrawler(values: Dict[str, Any]) -> None:
 
 def run_py_obfuscator(values: Dict[str, Any]) -> None:
     _log_start("Py Obfuscator", f"Running Python obfuscator on {values['input']}")
-    py_obfuscator.main(
-        values["input"],
-        values["output"],
-        values["level"],
-        values["rename_vars"],
-        values["rename_funcs"],
-        values["flow_obfuscation"],
-    )
+
+    # Create an args object that matches what the py_obfuscator module expects
+    class Args:
+        def __init__(self):
+            self.input = values["input"]
+            self.output = values["output"]
+            # Ensure level is converted to int to prevent type errors in py_obfuscator
+            try:
+                self.level = int(values["level"]) if values["level"] is not None else 2
+            except (ValueError, TypeError):
+                self.level = 2  # Default to standard protection level
+            self.rename_vars = values["rename_vars"]
+            self.rename_funcs = values["rename_funcs"]
+            self.flow_obfuscation = values["flow_obfuscation"]
+            # Adding potential additional attributes that might be expected
+            self.key = values.get("key")
+
+    py_obfuscator.main(Args())
 
 
 # ---------------------------------------------------------------------------

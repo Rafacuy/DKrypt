@@ -26,16 +26,16 @@ from core.utils import clear_console, header_banner
 
 class WAFTUI:
     """Terminal User Interface"""
-    
+
     def __init__(self):
         self.tester = WAFBypassTester()
         self.url: Optional[str] = None
         self.method: str = "GET"
         self.selected_packs: List[str] = []
         self.custom_headers: List[Dict[str, str]] = []
-    
-    def run(self, url=None, method="GET", packs=None, custom_headers=None, 
-              concurrency=10, timeout=10, jitter=0, verify_tls=True, 
+
+    async def run(self, url=None, method="GET", packs=None, custom_headers=None,
+              concurrency=10, timeout=10, jitter=0, verify_tls=True,
               profile=None, export=None, command=None, **kwargs):
         """Main application entry point"""
         if url:
@@ -58,7 +58,7 @@ class WAFTUI:
                 self._load_profile(profile_name=profile)
 
             if self.url:
-                asyncio.run(self._start_pipeline())
+                await self._start_pipeline()
                 if export:
                     self._export_results(self.tester.last_results, format=export)
             else:
@@ -66,13 +66,143 @@ class WAFTUI:
             return
 
         try:
-            self._main_loop()
+            await self._main_loop()
         except KeyboardInterrupt:
             console.print("\n[bold yellow]👋 Goodbye![/bold yellow]")
         except Exception as e:
             console.print(f"\n[bold red]❌ Error: {e}[/bold red]")
+
+    def run_interactive_cli(self, values: dict = None) -> None:
+        """
+        Enhanced method for Interactive CLI mode with helper functionality.
+        This method provides a simplified interface suitable for the interactive CLI.
+        """
+        if values:
+            # Process values from Interactive CLI with null-safety
+            self.url = values.get('url')
+            self.method = values.get('method', 'GET')
+            
+            # Ensure selected_packs is always a list
+            packs = values.get('packs', [])
+            if isinstance(packs, str) and packs:
+                self.selected_packs = [p.strip() for p in packs.split(",")]
+            elif isinstance(packs, list):
+                self.selected_packs = packs
+            else:
+                self.selected_packs = []
+            
+            # Ensure custom_headers is always a list
+            headers = values.get('custom_headers')
+            if isinstance(headers, list):
+                self.custom_headers = headers
+            elif headers is None:
+                self.custom_headers = []
+            else:
+                self.custom_headers = []
+
+            # Set configuration values with defaults
+            self.tester.config['timeout'] = values.get('timeout', 10)
+            self.tester.config['max_concurrency'] = values.get('concurrency', 10)
+            self.tester.config['jitter'] = values.get('jitter', 0.1)
+            self.tester.config['verify_tls'] = values.get('verify_tls', True)
+
+        # If URL is not provided, get it interactively
+        if not self.url:
+            self._configure_target()
+
+        # If no packs or custom headers are configured, provide helper to select them
+        if not self.selected_packs and not self.custom_headers:
+            self._interactive_helper()
+
+        # Run the pipeline
+        import asyncio
+        try:
+            asyncio.run(self._start_pipeline())
+        except RuntimeError:
+            # Handle case where asyncio event loop is already running
+            import threading
+            def run_async():
+                asyncio.run(self._start_pipeline())
+            thread = threading.Thread(target=run_async)
+            thread.start()
+            thread.join()
+
+    def _interactive_helper(self):
+        """
+        Helper function to guide users in selecting header packs and configuring settings
+        in a more user-friendly way for the interactive CLI.
+        """
+        # Ensure attributes are properly initialized
+        if self.selected_packs is None:
+            self.selected_packs = []
+        if self.custom_headers is None:
+            self.custom_headers = []
+            
+        console.print("\n[bold blue]WAF Bypass Tester Helper[/bold blue]")
+        console.print("Let me help you configure your scan...")
+
+        # Show available header packs
+        available_packs = [
+            ('identity_spoof', 'IP spoofing and client identity manipulation'),
+            ('routing_path', 'Host and path routing bypass attempts'),
+            ('parser_tricks', 'Content-type and encoding manipulation'),
+            ('tool_evasion', 'User-agent and request fingerprint evasion'),
+            ('advanced_evasion', 'Advanced techniques to bypass WAF header parser'),
+            ('api_gateway', 'API gateway & cloud environment bypass using custom headers'),
+            ('cdn_headers', 'CDN & Cache bypass using cache mechanism'),
+            ('protocol_anomalies', 'HTTP anomaly protocol'),
+            ('mobile_headers', 'Mobile device headers')
+        ]
+
+        console.print("\n[bold]Available Header Packs:[/bold]")
+        for i, (pack, desc) in enumerate(available_packs, 1):
+            console.print(f"[cyan]{i}.[/cyan] [yellow]{pack}[/yellow] - {desc}")
+
+        console.print("\n[cyan]Quick Options:[/cyan]")
+        console.print("  [bold]A[/bold] - Select All packs")
+        console.print("  [bold]B[/bold] - Basic packs (recommended for beginners)")
+        console.print("  [bold]C[/bold] - Custom selection")
+
+        choice = Prompt.ask("[bold]Choose option[/bold]", choices=["A", "B", "C"], default="B")
+
+        if choice == "A":
+            # Select all packs
+            self.selected_packs = [pack for pack, _ in available_packs]
+            console.print(f"[green]✅ Selected all {len(self.selected_packs)} packs[/green]")
+        elif choice == "B":
+            # Basic packs - select common ones
+            basic_packs = ['identity_spoof', 'tool_evasion', 'parser_tricks']
+            self.selected_packs = basic_packs
+            console.print(f"[green]✅ Selected basic packs: {', '.join(basic_packs)}[/green]")
+        elif choice == "C":
+            # Custom selection
+            pack_numbers = Prompt.ask("Enter pack numbers separated by commas (e.g., 1,3,5)", default="1,2,3")
+            try:
+                selected_indices = [int(x.strip()) - 1 for x in pack_numbers.split(",")]
+                self.selected_packs = [available_packs[i][0] for i in selected_indices if 0 <= i < len(available_packs)]
+                console.print(f"[green]✅ Selected packs: {', '.join(self.selected_packs)}[/green]")
+            except ValueError:
+                console.print("[red]Invalid input, using basic packs as fallback[/red]")
+                self.selected_packs = ['identity_spoof', 'tool_evasion', 'parser_tricks']
+
+        # Ask about custom headers
+        if Confirm.ask("\nWould you like to add custom headers?"):
+            self._manage_custom_headers()
+
+        # Show current configuration with null-safe operations
+        console.print("\n[bold]Current Configuration:[/bold]")
+        console.print(f"  • Target: [cyan]{self.url or 'Not set'}[/cyan]")
+        console.print(f"  • Method: [cyan]{self.method}[/cyan]")
+        console.print(f"  • Selected packs: [cyan]{len(self.selected_packs or [])}[/cyan]")
+        console.print(f"  • Custom headers: [cyan]{len(self.custom_headers or [])}[/cyan]")
+        console.print(f"  • Concurrency: [cyan]{self.tester.config.get('max_concurrency', 10)}[/cyan]")
+        console.print(f"  • Timeout: [cyan]{self.tester.config.get('timeout', 10)}s[/cyan]")
+
+        if not Confirm.ask("\nStart the scan with these settings?"):
+            console.print("[yellow]Scan cancelled by user[/yellow]")
+            return
     
-    def _main_loop(self):
+    async def _main_loop(self):
         """Main application loop"""
         clear_console()
         header_banner(tool_name="WAF Bypass Tester")
@@ -101,7 +231,7 @@ class WAFTUI:
             elif choice == "6":
                 self._view_results()
             elif choice.lower() == "s":
-                asyncio.run(self._start_pipeline())
+                await self._start_pipeline()
             elif choice.lower() == "q":
                 break
     
@@ -136,18 +266,21 @@ class WAFTUI:
         # Target info
         console.print(f"🎯 [bold]Target:[/bold] {self.url} ([cyan]{self.method}[/cyan])")
         
-        # Configuration status
+        # Configuration status with null-safety
         config_table = Table.grid(padding=(0, 2))
         config_table.add_column(style="bold")
         config_table.add_column()
         
-        packs_status = f"[green]{len(self.selected_packs)} packs[/green]" if self.selected_packs else "[dim]None[/dim]"
-        custom_status = f"[green]{len(self.custom_headers)} headers[/green]" if self.custom_headers else "[dim]None[/dim]"
+        packs_count = len(self.selected_packs or [])
+        headers_count = len(self.custom_headers or [])
+        
+        packs_status = f"[green]{packs_count} packs[/green]" if packs_count > 0 else "[dim]None[/dim]"
+        custom_status = f"[green]{headers_count} headers[/green]" if headers_count > 0 else "[dim]None[/dim]"
         
         config_table.add_row("Header Packs:", packs_status)
         config_table.add_row("Custom Headers:", custom_status)
-        config_table.add_row("Concurrency:", f"{self.tester.config['max_concurrency']}")
-        config_table.add_row("TLS Verify:", f"{'✅' if self.tester.config['verify_tls'] else '❌'}")
+        config_table.add_row("Concurrency:", f"{self.tester.config.get('max_concurrency', 10)}")
+        config_table.add_row("TLS Verify:", f"{'✅' if self.tester.config.get('verify_tls', True) else '❌'}")
         
         console.print(Panel(config_table, title="Configuration", border_style="blue"))
         
@@ -212,6 +345,10 @@ class WAFTUI:
     
     def _manage_custom_headers(self):
         """Manage custom header definitions"""
+        # Ensure custom_headers is initialized
+        if self.custom_headers is None:
+            self.custom_headers = []
+            
         while True:
             console.print("\n--- [bold]Custom Headers[/bold] ---")
             
@@ -340,8 +477,15 @@ class WAFTUI:
             
             self.url = profile_data.get("url")
             self.method = profile_data.get("method", "GET")
+            
+            # Ensure loaded data is properly typed
             self.selected_packs = profile_data.get("selected_packs", [])
+            if not isinstance(self.selected_packs, list):
+                self.selected_packs = []
+                
             self.custom_headers = profile_data.get("custom_headers", [])
+            if not isinstance(self.custom_headers, list):
+                self.custom_headers = []
             
             if "config" in profile_data:
                 self.tester.config.update(profile_data["config"])
@@ -354,6 +498,12 @@ class WAFTUI:
     
     async def _start_pipeline(self):
         """Execute the complete testing pipeline"""
+        # Ensure attributes are properly initialized
+        if self.selected_packs is None:
+            self.selected_packs = []
+        if self.custom_headers is None:
+            self.custom_headers = []
+            
         if not self.selected_packs and not self.custom_headers:
             console.print("[red]❌ No tests configured! Select header packs or add custom headers.[/red]")
             time.sleep(2)

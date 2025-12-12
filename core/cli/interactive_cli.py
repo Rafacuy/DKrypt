@@ -339,7 +339,7 @@ class InteractiveCLI:
         else:
             console.print(f"[red]Option {option} not set for module {self.module}.[/red]")
     
-    def do_run(self, arg):
+    async def do_run(self, arg):
         if not self.module:
             self.ui_formatter.print_status("warning", "No module selected. Use 'use <module>' first.")
             return
@@ -380,7 +380,11 @@ class InteractiveCLI:
 
             args_obj = argparse.Namespace(**final_options)
             module_func = module_info['function']
-            module_func(args_obj)
+            
+            # Execute the module function, awaiting if it's a coroutine
+            result = module_func(args_obj)
+            if asyncio.iscoroutine(result):
+                await result
 
             elapsed = time.time() - start_time
             self.ui_formatter.print_status("success", f"Module {self.module} completed in {elapsed:.2f}s")
