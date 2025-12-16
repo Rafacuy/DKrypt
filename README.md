@@ -14,7 +14,7 @@
 
 ---
 
-**DKrypt** is a modern penetration testing framework for security professionals and ethical hackers. Built with Python 3.10+, it provides a unified CLI and a rich interactive TUI for reconnaissance, vulnerability scanning, and security analysis.
+**DKrypt** is a modern penetration testing framework for security professionals and ethical hackers. Built with Python 3.10+, it provides a unified CLI and a rich interactive CLI (like msfconsole) for reconnaissance, vulnerability scanning, and security analysis.
 
 ## Table of Contents
 - [🎯 Overview](#-overview)
