@@ -21,16 +21,12 @@ ENV/
 .env
 .env.local
 
-# Logs
+# Logs & dotfiles
 *.log
-.dkrypt/logs/
+.dkrypt/
 
 # Reports & Results
 reports/
-.dkrypt/
-.dkrypt/results/
-.dkrypt/outputs/
-.dkrypt/cache/
 
 # OS
 .DS_Store

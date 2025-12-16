@@ -227,8 +227,12 @@ def run_sqli(values: Dict[str, Any]) -> None:
 
 def run_xss(values: Dict[str, Any]) -> None:
     _log_start("XSS scanner", f"Running XSS scanner on {values['url']}")
-    asyncio.run(
-        scanner.run_xss_scan(
+    import asyncio
+    try:
+        loop = asyncio.get_running_loop()
+        # If there's already a running event loop, we can't use asyncio.run()
+        # We'll return the coroutine for the caller to handle
+        return scanner.run_xss_scan(
             values["url"],
             values["threads"],
             values["rate_limit"],
@@ -239,7 +243,21 @@ def run_xss(values: Dict[str, Any]) -> None:
             values["test_headers"],
             values["verbose"],
         )
-    )
+    except RuntimeError:
+        # No event loop running, safe to use asyncio.run()
+        asyncio.run(
+            scanner.run_xss_scan(
+                values["url"],
+                values["threads"],
+                values["rate_limit"],
+                values["max_payloads"],
+                values["batch_size"],
+                values["smart_mode"],
+                values["stealth_mode"],
+                values["test_headers"],
+                values["verbose"],
+            )
+        )
 
 
 def run_graphql(values: Dict[str, Any]) -> None:
@@ -279,7 +297,16 @@ def run_portscanner(values: Dict[str, Any]) -> None:
             self.output = values.get("output", "no")
             self.file = values.get("file")
 
-    asyncio.run(port_scanner.main_menu(Args()))
+    # Check if we're in an event loop and handle accordingly
+    import asyncio
+    try:
+        loop = asyncio.get_running_loop()
+        # If there's already a running event loop, we can't use asyncio.run()
+        # We'll return the coroutine for the caller to handle
+        return port_scanner.main_menu(Args())
+    except RuntimeError:
+        # No event loop running, safe to use asyncio.run()
+        asyncio.run(port_scanner.main_menu(Args()))
 
 
 def run_waftester(values: Dict[str, Any]) -> None:
@@ -335,7 +362,15 @@ def run_subdomain(values: Dict[str, Any]) -> None:
             self.output_formats = values.get("output_formats", "json,csv,txt")
             self.file = values.get("file")
 
-    asyncio.run(subdomain.main_menu(Args()))
+    import asyncio
+    try:
+        loop = asyncio.get_running_loop()
+        # If there's already a running event loop, we can't use asyncio.run()
+        # We'll return the coroutine for the caller to handle
+        return subdomain.main_menu(Args())
+    except RuntimeError:
+        # No event loop running, safe to use asyncio.run()
+        asyncio.run(subdomain.main_menu(Args()))
 
 
 def run_crawler(values: Dict[str, Any]) -> None:
@@ -354,7 +389,15 @@ def run_crawler(values: Dict[str, Any]) -> None:
             self.file = values.get("file")
             self.output_file = values.get("output_file")
 
-    asyncio.run(crawler_utils.main(Args()))
+    import asyncio
+    try:
+        loop = asyncio.get_running_loop()
+        # If there's already a running event loop, we can't use asyncio.run()
+        # We'll return the coroutine for the caller to handle
+        return crawler_utils.main(Args())
+    except RuntimeError:
+        # No event loop running, safe to use asyncio.run()
+        asyncio.run(crawler_utils.main(Args()))
 
 
 def run_headers(values: Dict[str, Any]) -> None:
